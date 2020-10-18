@@ -15,11 +15,11 @@ Features:
 Installation:
 ```rm -rf /data/autotuner/; git clone https://github.com/tonton81/autotuner.git /data/autotuner; bash /data/autotuner/install.sh```
 
-The first time you run '/data/autotuner.sh' it will patch the necessary files then reboot automatically.
+The first time you run ```bash /data/autotuner.sh``` it will patch the necessary files then reboot automatically.
 Make sure comma is installed in the car and the car is detected. This will generate new entries automatically for the json file.
 
 Tunes: (1 currently)
 
 * This tune can take an input of Kp, and compute BP and Ki from it. The changes are live.
-  Usage: 'bash autotuner.sh TUNEKP 0.15'
+  Usage: ```bash autotuner.sh TUNEKP 0.15```
   This will configure BP to 20480, and Ki to 0.5. The changes will be made live as the json is updated.
