@@ -20,14 +20,15 @@ class autotuner_config:
 
     with open(self.file_path, 'r') as file:
       config_data = json.loads(file.read())
-
       try:
         if len(config_data[key]) == 0: #if key is empty, use default from OP
           return default
         return config_data[key]
 
       except KeyError: # if key doesn't exist, use default
-        new_queue_file = "/data/" + str(key) + ".queue"  #also queue it in a separate file, to be processed via bash
+        if not os.path.exists('/data/autotuner/queues/'):
+          os.mkdir('/data/autotuner/queues/')
+        new_queue_file = "/data/autotuner/queues/" + str(key) + ".queue"  #also queue it in a separate file, to be processed via bash
         if not os.path.exists(new_queue_file): #make sure it wasn't already created for queue
           dictionary = {
                        }

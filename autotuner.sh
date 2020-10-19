@@ -3,17 +3,19 @@
 
 if [ ! -z "$1" ] && [ $1 == "RESET" ]
   then
-    rm autotuner.json
-    echo "Restored stock settings..."
+    rm autotuner.json 2>/dev/nul
+    echo "Cleared json entries. Note, to refresh the cached keys in session, this must be re-run after reboot"
 fi
 
 
 
 #first, we append queued dictionary entries to main configuration (if any)
-for filename in *.queue
+for filename in /data/autotuner/queues/*.queue
 do
   if [ -f $filename ]
     then
+      printf "New key added:"
+      cat $filename | sed -n '2 p'
       python autotuner_config.py "BASH_NEW_QUEUE" $filename
       rm $filename
   fi
@@ -80,5 +82,9 @@ if [ ! -z "$1" ] && [ $1 == "TUNEKP" ] && [ ! -z "$2" ]
     if [[ $2 =~ ^[0-9]+([.][0-9]+)?$ ]] # is a float or integer
       then
         python autotuner_config.py COMPUTE_BP_KI_FROM_KP $2
+        printf "\n  New tune set!\n"
+        cat /data/autotuner.json | grep "torqueBPV"
+        cat /data/autotuner.json | grep "pidKpKi"
+        echo ""
     fi
 fi
