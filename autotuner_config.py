@@ -10,13 +10,11 @@ class autotuner_config:
 
 
   def get(self, key, default):
-
     if not os.path.exists(self.file_path): #create dictionary if it doesn't exist
       dictionary = {
                    }
       with open(self.file_path, 'w', encoding='utf8') as file:
         json.dump(dictionary, file, indent=2, sort_keys=True, separators=(',', ': '), ensure_ascii=False)
-
 
     with open(self.file_path, 'r') as file:
       config_data = json.loads(file.read())
@@ -41,41 +39,135 @@ class autotuner_config:
   def bash_new_queue(self, from_file):
     with open(self.file_path, 'r') as file: #read our configuration
       config_data = json.loads(file.read())
+
     with open(from_file, 'r') as file: #get the queue to append
       new_data = json.loads(file.read())
       new_dictionary = dict(list(config_data.items()) + list(new_data.items()))
+
     with open('/data/autotuner.tmp', 'w', encoding='utf8') as file: #write new config to a temporary file
       json.dump(new_dictionary, file, indent=2, sort_keys=True, separators=(',', ': '), ensure_ascii=False)
+
+      shutil.move('/data/autotuner.tmp', '/data/autotuner.json') #change it as main config file
+
+
+  def resetall_config(self):
+    dictionary = {
+                   "reset_defaults": "1"
+                 }
+    with open('/data/autotuner.tmp', 'w', encoding='utf8') as file: #write new config to a temporary file
+      json.dump(dictionary, file, indent=2, sort_keys=True, separators=(',', ': '), ensure_ascii=False)
       file.flush()
     shutil.move('/data/autotuner.tmp', '/data/autotuner.json') #change it as main config file
 
 
 
 
-#BASH AREA: here we check for arguments (if any)
+#FROM BASH ARGUMENTS
 if len(sys.argv) > 1:
   autotuner_config = autotuner_config()
 
+  if not os.path.exists('/data/autotuner.json'):
+    dictionary = {
+                 }
+    with open('/data/autotuner.json', 'w', encoding='utf8') as file:
+      json.dump(dictionary, file, indent=2, sort_keys=True, separators=(',', ': '), ensure_ascii=False)
 
-  if sys.argv[1] == "BASH_NEW_QUEUE": #append to our config file from queue
-    autotuner_config.bash_new_queue(sys.argv[2])
+
+  with open('/data/autotuner.json', 'r') as file: #read our configuration
+    config_data = json.loads(file.read())
 
 
-  if sys.argv[1] == "COMPUTE_BP_KI_FROM_KP": #calculate BP based off Kp, and tune both BP and Ki proportionally
-    with open('/data/autotuner.json', 'r') as file: #read our configuration
-      config_data = json.loads(file.read())
-    sys.argv[2] = (min(float(2), max(float(0), float(sys.argv[2]))))
-    BPV_list = eval(config_data['torqueBPV'])
-    KpKi_list = eval(config_data['pidKpKi'])
-    BP_calc = float(BPV_list[1][2]) * 0.8 / float(sys.argv[2])
-    Ki_calc = float(sys.argv[2]) / 3
-    KpKi_list[0][0] = float(sys.argv[2]) #we store new Kp
-    KpKi_list[1][0] = round(Ki_calc, 5) #we store new Ki
-    BPV_list[0][2] = round(BP_calc) #we store new BP
-    config_data['torqueBPV'] = str(BPV_list)
-    config_data['pidKpKi'] = str(KpKi_list)
-    with open('/data/autotuner.tmp', 'w', encoding='utf8') as file: #write new config to a temporary file
-      json.dump(config_data, file, indent=2, sort_keys=True, separators=(',', ': '), ensure_ascii=False)
-      file.flush()
-    shutil.move('/data/autotuner.tmp', '/data/autotuner.json') #change it as main config file
+
+  for i in range(1, len(sys.argv)):
+    if sys.argv[i] == "RESET":
+      autotuner_config.resetall_config()
+      raise SystemExit()
+    if sys.argv[i] == "BASH_NEW_QUEUE":
+      autotuner_config.bash_new_queue(sys.argv[2])
+      raise SystemExit()
+    if sys.argv[i] == "SET.BP":
+      try:
+        BPV_list = eval(config_data['torqueBPV'])
+        BPV_list[0][-1] = round(float(sys.argv[i+1]))
+        config_data['torqueBPV'] = str(BPV_list)
+      except KeyError:
+        continue
+    if sys.argv[i] == "SET.V":
+      try:
+        BPV_list = eval(config_data['torqueBPV'])
+        BPV_list[1][-1] = round(float(sys.argv[i+1]))
+        config_data['torqueBPV'] = str(BPV_list)
+      except KeyError:
+        continue
+    if sys.argv[i] == "SET.MP":
+      try:
+        BPV_list = eval(config_data['torqueBPV'])
+        BPV_list[0][1] = round(float(sys.argv[i+1]))
+        BPV_list[1][1] = round(float(sys.argv[i+1]))
+        config_data['torqueBPV'] = str(BPV_list)
+      except KeyError:
+        continue
+    if sys.argv[i] == "SET.KP":
+      try:
+        KpKi_list = eval(config_data['pidKpKi'])
+        KpKi_list[0][0] = float(sys.argv[i+1])
+        config_data['pidKpKi'] = str(KpKi_list)
+      except KeyError:
+        continue
+    if sys.argv[i] == "SET.KI":
+      try:
+        KpKi_list = eval(config_data['pidKpKi'])
+        KpKi_list[1][0] = float(sys.argv[i+1])
+        config_data['pidKpKi'] = str(KpKi_list)
+      except KeyError:
+        continue
+    if sys.argv[i] == "SET.KPDIV":
+      try:
+        KpDIV = float(sys.argv[i+1])
+      except KeyError:
+        continue
+    if sys.argv[i] == "TUNEKP":
+      try:
+        KpKi_list = eval(config_data['pidKpKi'])
+        KpKi_list[0][0] = float(sys.argv[i+1])
+        config_data['pidKpKi'] = str(KpKi_list)
+      except KeyError:
+        continue
+
+
+###############################################################################################
+  try:                                                                 # CONFIGURE BP/V/Kp/Ki #
+    if "TUNEKP" in str(sys.argv):                                      #    THEN PRINT RESULT #
+      BPV_list = eval(config_data['torqueBPV'])                        ########################
+      KpKi_list = eval(config_data['pidKpKi'])
+      KP_DIV = float(KpDIV) if "KPDIV" in str(sys.argv) else float(3)
+      if not "SET.BP" in str(sys.argv):
+        BPV_list[0][-1] = round(float(BPV_list[1][-1]) * 0.8 / float(KpKi_list[0][0]))
+        config_data['torqueBPV'] = str(BPV_list)
+      KpKi_list[1][0] = round(float(KpKi_list[0][0]) / KP_DIV, 5)
+      config_data['pidKpKi'] = str(KpKi_list)
+    if "SET.BP" in str(sys.argv) or \
+       "SET.V" in str(sys.argv) or \
+       "SET.MP" in str(sys.argv) or \
+       "SET.KP" in str(sys.argv) or \
+       "SET.KI" in str(sys.argv) or \
+       "SET.KPDIV" in str(sys.argv) or \
+       "TUNEKP" in str(sys.argv):
+       BPV_list = eval(config_data['torqueBPV'])
+       KpKi_list = eval(config_data['pidKpKi'])
+       print ("\n  New tune set!\n    " + str(BPV_list) + "\n    " + str(KpKi_list) + "\n")
+###############################################################################################
+  except KeyError:
+    print ("\x1b[1;31m\n  Missing torqueBP, torqueV, kpV, kiV sets, make sure engine is")
+    print ("    running so keys will be generated\n\x1b[0m")
+###############################################################################################
+
+
+######################################################################################################################
+  with open('/data/autotuner.tmp', 'w', encoding='utf8') as file:                                      # UPDATE JSON #
+    json.dump(config_data, file, indent=2, sort_keys=True, separators=(',', ': '), ensure_ascii=False) ###############
+    file.flush()
+  shutil.move("/data/autotuner.tmp", "/data/autotuner.json") #change it as main config file
+######################################################################################################################
+######################################################################################################################
 
