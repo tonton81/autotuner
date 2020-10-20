@@ -134,6 +134,13 @@ if len(sys.argv) > 1:
       except KeyError:
         continue
 
+    if sys.argv[i] == "SET.KF":
+      try:
+        config_data['kf'] = str(sys.argv[i+1])
+      except KeyError:
+        continue
+
+
 
 ###############################################################################################
   try:                                                                 # CONFIGURE BP/V/Kp/Ki #

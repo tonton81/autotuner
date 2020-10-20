@@ -73,6 +73,9 @@ if ( ! grep -Fxq "from autotuner_config import autotuner_config" /data/openpilot
 
     sed -i '/pid_log \= log*/i \    BPV = "[" + str(CP.lateralParams.torqueBP) + ", " + str(CP.lateralParams.torqueV) + "]"' /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
     sed -i '/pid_log \= log*/i \    KpKi = "[" + str(CP.lateralTuning.pid.kpV) + ", " + str(CP.lateralTuning.pid.kiV) + "]"' /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
+
+#    sed -i '/pid_log \= log*/i \    CP.lateralTuning.pid.kf = eval(autotuner_config.get("kf", CP.lateralTuning.pid.kf))' /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
+
     sed -i '/pid_log \= log*/i \    CP.lateralParams.torqueBP, CP.lateralParams.torqueV = eval(autotuner_config.get("torqueBPV", BPV))' /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
     sed -i '/pid_log \= log*/i \    CP.lateralTuning.pid.kpV, CP.lateralTuning.pid.kiV = eval(autotuner_config.get("pidKpKi", KpKi))' /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
     sed -i '/pid_log \= log*/i \    self.pid = PIController((CP.lateralTuning.pid.kpBP, CP.lateralTuning.pid.kpV),' /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
@@ -83,6 +86,46 @@ if ( ! grep -Fxq "from autotuner_config import autotuner_config" /data/openpilot
     echo "Patched latcontrol_pid.py"
     ((patchCounter+=1))
 fi
+
+
+
+if ( ! grep -Fq "self.k_f = float(format(eval(autotuner_config.get" /data/openpilot/selfdrive/controls/lib/pid.py )
+  then
+     sed -i '/def update(self/a \    self.k_f = float(format(eval(autotuner_config.get("kf", str(format(self.k_f, ".5f")))), ".5f"))' /data/openpilot/selfdrive/controls/lib/pid.py
+    ((patchCounter+=1))
+fi
+if ( ! grep -Fq "CP.lateralTuning.pid.kf = float(format(eval(autotuner_config.get" /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py )
+  then
+    sed -i '/def update(self/a \    CP.lateralTuning.pid.kf = float(format(eval(autotuner_config.get("kf", str(format(CP.lateralTuning.pid.kf, ".5f")))), ".5f"))' /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
+    ((patchCounter+=1))
+fi
+
+
+
+
+if ( ! grep -Fxq "from autotuner_config import autotuner_config" /data/openpilot/selfdrive/controls/lib/pid.py )
+  then
+    sed -i -e '2i\' -e "autotuner_config = autotuner_config()" /data/openpilot/selfdrive/controls/lib/pid.py
+    sed -i -e '2i\' -e "from autotuner_config import autotuner_config" /data/openpilot/selfdrive/controls/lib/pid.py
+    sed -i -e '2i\' -e "sys.path.append(\"/data/\")" /data/openpilot/selfdrive/controls/lib/pid.py
+    sed -i -e '2i\' -e "import sys" /data/openpilot/selfdrive/controls/lib/pid.py
+    sed -i -e '2i\' -e "import json" /data/openpilot/selfdrive/controls/lib/pid.py
+    echo "Patched pid.py"
+    ((patchCounter+=1))
+fi
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 if [ $patchCounter != 0 ]
   then
