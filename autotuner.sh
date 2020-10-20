@@ -3,8 +3,24 @@
 
 if [ ! -z "$1" ] && [ $1 == "RESET" ]
   then
-    rm autotuner.json 2>/dev/nul
-    echo "Cleared json entries. Note, to refresh the cached keys in session, this must be re-run after reboot"
+    python autotuner_config.py $@
+    sync
+    printf "\n\n  Dictionary cleared. Rebooting to clear cache OP uses when entries are not set.\n"
+    printf "  New keys will be generated from openpilot and automatically imported with the\n"
+    printf "    default values, make sure your car is detected so keys can be generated\n"
+    printf "\n  Rebooting...\n\n"
+    reboot
+fi
+
+
+
+if [ -f /data/autotuner.json ] #remove stale queues after RESET
+  then
+    if ( grep -q "reset_defaults" /data/autotuner.json )
+      then
+        rm autotuner.json 2>/dev/nul
+        rm /data/autotuner/queues/*.queue 2>/dev/nul
+    fi
 fi
 
 
@@ -24,7 +40,6 @@ done
 
 
 # make sure necessary files are patched
-
 patchCounter=0
 
 if ( ! grep -Fxq "from autotuner_config import autotuner_config" /data/openpilot/selfdrive/car/honda/carcontroller.py )
@@ -77,14 +92,9 @@ fi
 
 
 
-if [ ! -z "$1" ] && [ $1 == "TUNEKP" ] && [ ! -z "$2" ] 
+#Let's pass all further arguments to python
+
+if [ ! -z "$1" ]
   then
-    if [[ $2 =~ ^[0-9]+([.][0-9]+)?$ ]] # is a float or integer
-      then
-        python autotuner_config.py COMPUTE_BP_KI_FROM_KP $2
-        printf "\n  New tune set!\n"
-        cat /data/autotuner.json | grep "torqueBPV"
-        cat /data/autotuner.json | grep "pidKpKi"
-        echo ""
-    fi
+    python autotuner_config.py $@
 fi
