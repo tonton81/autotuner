@@ -1,6 +1,7 @@
 #!/bin/bash
-
-
+#####################################################################################################################################################################
+##### IN THIS RESET, THE JSON IS CLEARED, COMMA REBOOTS, AND OPENPILOT SETS CAR SPECIFIC DEFAULT VALUES AS WELL AS NEW KEYS ARE GENERATED FOR JSON AUTOMATICALLY ####
+#####################################################################################################################################################################
 if [ ! -z "$1" ] && [ $1 == "RESET" ]
   then
     python autotuner_config.py $@
@@ -11,9 +12,6 @@ if [ ! -z "$1" ] && [ $1 == "RESET" ]
     printf "\n  Rebooting...\n\n"
     reboot
 fi
-
-
-
 if [ -f /data/autotuner.json ] #remove stale queues after RESET
   then
     if ( grep -q "reset_defaults" /data/autotuner.json )
@@ -22,10 +20,9 @@ if [ -f /data/autotuner.json ] #remove stale queues after RESET
         rm /data/autotuner/queues/*.queue 2>/dev/nul
     fi
 fi
-
-
-
-#first, we append queued dictionary entries to main configuration (if any)
+#####################################################################################################################################################################
+##### OPENPILOT GENERATES MISSING KEYS AUTOMATICALLY WITH CAR SPECIFIC DEFAULTS. WHILE DICTIONARY IS NOT SET, OPENPILOT WILL USE DEFAULT CONFIGURATION ##############
+#####################################################################################################################################################################
 for filename in /data/autotuner/queues/*.queue
 do
   if [ -f $filename ]
@@ -36,62 +33,56 @@ do
       rm $filename
   fi
 done
-
-
-
-# make sure necessary files are patched
+#####################################################################################################################################################################
+##### PATCH INCLUDES ################################################################################################################################################
+#####################################################################################################################################################################
 patchCounter=0
-
-if ( ! grep -Fxq "from autotuner_config import autotuner_config" /data/openpilot/selfdrive/car/honda/carcontroller.py )
+for f in /data/openpilot/selfdrive/car/honda/carcontroller.py \
+         /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py \
+         /data/openpilot/selfdrive/controls/lib/pid.py
+do
+  if ( ! grep -Fxq "from autotuner_config import autotuner_config" $f )
+    then
+      sed -i -e '2i\' -e "autotuner_config = autotuner_config()" $f
+      sed -i -e '2i\' -e "from autotuner_config import autotuner_config" $f
+      sed -i -e '2i\' -e "sys.path.append(\"/data/\")" $f
+      sed -i -e '2i\' -e "import sys" $f
+      sed -i -e '2i\' -e "import json" $f
+      printf "Patched file: %s\n" "$f"
+      ((patchCounter+=1))
+  fi
+done
+#####################################################################################################################################################################
+##### PATCH BP/V/Ki/Kp ##############################################################################################################################################
+#####################################################################################################################################################################
+if ( ! grep -Fq "CP.lateralTuning.pid.kiV = eval(autotuner_config.get" /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py )
   then
-    sed -i -e '2i\' -e "autotuner_config = autotuner_config()" /data/openpilot/selfdrive/car/honda/carcontroller.py
-    sed -i -e '2i\' -e "from autotuner_config import autotuner_config" /data/openpilot/selfdrive/car/honda/carcontroller.py
-    sed -i -e '2i\' -e "sys.path.append(\"/data/\")" /data/openpilot/selfdrive/car/honda/carcontroller.py
-    sed -i -e '2i\' -e "import sys" /data/openpilot/selfdrive/car/honda/carcontroller.py
-    sed -i -e '2i\' -e "import json" /data/openpilot/selfdrive/car/honda/carcontroller.py
-
+    sed -i '/def update(self/a \                            sat_limit=CP.steerLimitTimer)' /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
+    sed -i '/def update(self/a \                            k_f=CP.lateralTuning.pid.kf, pos_limit=1.0, neg_limit=-1.0,' /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
+    sed -i '/def update(self/a \                            (CP.lateralTuning.pid.kiBP, CP.lateralTuning.pid.kiV),' /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
+    sed -i '/def update(self/a \    self.pid = PIController((CP.lateralTuning.pid.kpBP, CP.lateralTuning.pid.kpV),' /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
+    sed -i '/def update(self/a \    CP.lateralTuning.pid.kpV, CP.lateralTuning.pid.kiV = eval(autotuner_config.get("pidKpKi", KpKi))' /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
+    sed -i '/def update(self/a \    CP.lateralParams.torqueBP, CP.lateralParams.torqueV = eval(autotuner_config.get("torqueBPV", BPV))' /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
+    sed -i '/def update(self/a \    KpKi = "[" + str(CP.lateralTuning.pid.kpV) + ", " + str(CP.lateralTuning.pid.kiV) + "]"' /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
+    sed -i '/def update(self/a \    BPV = "[" + str(CP.lateralParams.torqueBP) + ", " + str(CP.lateralParams.torqueV) + "]"' /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
+    ((patchCounter+=1))
+fi
+if ( ! grep -Fq "tunedV = eval(autotuner_config.get(" /data/openpilot/selfdrive/car/honda/carcontroller.py )
+  then
     sed -i '/P \= self.params/i \    BPV = "[" + str(CS.CP.lateralParams.torqueBP) + ", " + str(CS.CP.lateralParams.torqueV) + "]"' /data/openpilot/selfdrive/car/honda/carcontroller.py
     sed -i '/P \= self.params/i \    KpKi = "[" + str(CS.CP.lateralTuning.pid.kpV) + ", " + str(CS.CP.lateralTuning.pid.kiV) + "]"' /data/openpilot/selfdrive/car/honda/carcontroller.py
     sed -i '/P \= self.params/i \    tunedBP, tunedV = eval(autotuner_config.get("torqueBPV", BPV))' /data/openpilot/selfdrive/car/honda/carcontroller.py
     sed -i '/P \= self.params/i \    self.params.STEER_MAX = tunedBP[-1]' /data/openpilot/selfdrive/car/honda/carcontroller.py
     sed -i '/P \= self.params/i \    self.params.STEER_LOOKUP_BP = [v * -1 for v in tunedBP][1:][::-1] + list(tunedBP)' /data/openpilot/selfdrive/car/honda/carcontroller.py
     sed -i '/P \= self.params/i \    self.params.STEER_LOOKUP_V = [v * -1 for v in tunedV][1:][::-1] + list(tunedV)' /data/openpilot/selfdrive/car/honda/carcontroller.py
-
-    echo "Patched carcontroller.py"
     ((patchCounter+=1))
 fi
-
-
-
-if ( ! grep -Fxq "from autotuner_config import autotuner_config" /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py )
-  then
-    sed -i -e '2i\' -e "autotuner_config = autotuner_config()" /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
-    sed -i -e '2i\' -e "from autotuner_config import autotuner_config" /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
-    sed -i -e '2i\' -e "sys.path.append(\"/data/\")" /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
-    sed -i -e '2i\' -e "import sys" /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
-    sed -i -e '2i\' -e "import json" /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
-
-    sed -i '/pid_log \= log*/i \    BPV = "[" + str(CP.lateralParams.torqueBP) + ", " + str(CP.lateralParams.torqueV) + "]"' /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
-    sed -i '/pid_log \= log*/i \    KpKi = "[" + str(CP.lateralTuning.pid.kpV) + ", " + str(CP.lateralTuning.pid.kiV) + "]"' /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
-
-#    sed -i '/pid_log \= log*/i \    CP.lateralTuning.pid.kf = eval(autotuner_config.get("kf", CP.lateralTuning.pid.kf))' /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
-
-    sed -i '/pid_log \= log*/i \    CP.lateralParams.torqueBP, CP.lateralParams.torqueV = eval(autotuner_config.get("torqueBPV", BPV))' /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
-    sed -i '/pid_log \= log*/i \    CP.lateralTuning.pid.kpV, CP.lateralTuning.pid.kiV = eval(autotuner_config.get("pidKpKi", KpKi))' /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
-    sed -i '/pid_log \= log*/i \    self.pid = PIController((CP.lateralTuning.pid.kpBP, CP.lateralTuning.pid.kpV),' /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
-    sed -i '/pid_log \= log*/i \                            (CP.lateralTuning.pid.kiBP, CP.lateralTuning.pid.kiV),' /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
-    sed -i '/pid_log \= log*/i \                            k_f=CP.lateralTuning.pid.kf, pos_limit=1.0, neg_limit=-1.0,' /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
-    sed -i '/pid_log \= log*/i \                            sat_limit=CP.steerLimitTimer)' /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
-
-    echo "Patched latcontrol_pid.py"
-    ((patchCounter+=1))
-fi
-
-
-
+#####################################################################################################################################################################
+##### PATCH KF ######################################################################################################################################################
+#####################################################################################################################################################################
 if ( ! grep -Fq "self.k_f = float(format(eval(autotuner_config.get" /data/openpilot/selfdrive/controls/lib/pid.py )
   then
-     sed -i '/def update(self/a \    self.k_f = float(format(eval(autotuner_config.get("kf", str(format(self.k_f, ".5f")))), ".5f"))' /data/openpilot/selfdrive/controls/lib/pid.py
+    sed -i '/def update(self/a \    self.k_f = float(format(eval(autotuner_config.get("kf", str(format(self.k_f, ".5f")))), ".5f"))' /data/openpilot/selfdrive/controls/lib/pid.py
     ((patchCounter+=1))
 fi
 if ( ! grep -Fq "CP.lateralTuning.pid.kf = float(format(eval(autotuner_config.get" /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py )
@@ -99,44 +90,17 @@ if ( ! grep -Fq "CP.lateralTuning.pid.kf = float(format(eval(autotuner_config.ge
     sed -i '/def update(self/a \    CP.lateralTuning.pid.kf = float(format(eval(autotuner_config.get("kf", str(format(CP.lateralTuning.pid.kf, ".5f")))), ".5f"))' /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
     ((patchCounter+=1))
 fi
-
-
-
-
-if ( ! grep -Fxq "from autotuner_config import autotuner_config" /data/openpilot/selfdrive/controls/lib/pid.py )
-  then
-    sed -i -e '2i\' -e "autotuner_config = autotuner_config()" /data/openpilot/selfdrive/controls/lib/pid.py
-    sed -i -e '2i\' -e "from autotuner_config import autotuner_config" /data/openpilot/selfdrive/controls/lib/pid.py
-    sed -i -e '2i\' -e "sys.path.append(\"/data/\")" /data/openpilot/selfdrive/controls/lib/pid.py
-    sed -i -e '2i\' -e "import sys" /data/openpilot/selfdrive/controls/lib/pid.py
-    sed -i -e '2i\' -e "import json" /data/openpilot/selfdrive/controls/lib/pid.py
-    echo "Patched pid.py"
-    ((patchCounter+=1))
-fi
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#####################################################################################################################################################################
+##### REBOOT IF ANY PATCHES WERE MADE ###############################################################################################################################
+#####################################################################################################################################################################
 if [ $patchCounter != 0 ]
   then
     echo "Patches complete! Rebooting..."
     reboot
 fi
-
-
-
-#Let's pass all further arguments to python
-
+#####################################################################################################################################################################
+##### SEND REMAINING ARGUMENTS TO PYTHON SCRIPT FOR PROCESSING ######################################################################################################
+#####################################################################################################################################################################
 if [ ! -z "$1" ]
   then
     python autotuner_config.py $@
