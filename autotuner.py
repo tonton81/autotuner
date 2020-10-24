@@ -27,7 +27,6 @@ class TMGTuner:
         self.user_input = ""
         self.thread_once = 0
         self.menuscreen = "main"
-#        self.string_input = ""
         self.input_queue = queue.Queue()
 
     def get_input_key(self):
@@ -86,17 +85,202 @@ def main_screen():
     system('clear')
     print ("\n\n\n\r\t\t\033[1m\033[4mWhat would you like to mod today?\033[0m\n\n\r")
     print ("\t\t\t1) BP, V, Kp, Ki\n\r")
+    print ("\t\t\t2) Kf, Steer Ratio, Steer Rate Cost\n\r")
     print ("\t\t\tx) exit\n\r")
     print ("\n\n\n\n\r")
 
     if nbi.user_input == "1":
         nbi.menuscreen = "bpvkpki"
 
+    if nbi.user_input == "2":
+        nbi.menuscreen = "KfSrSrc"
+
     if nbi.user_input == "x":
         os.system('stty sane')
         sys.exit(0)
 
     time.sleep(0.2)
+#######################################################################################
+def KfSrSrc_screen():
+    exit_condition = False
+    selection = 0
+    srpercent = 15
+    srval = 0.5
+    srcpercent = 15
+    srcval = 0.05
+    kfpercent = 15
+    kfval = 0.00001
+    while exit_condition == False:
+        system('clear')
+        print ("\n\n\n\r\t\t\t\t\033[1m\033[4mSteer Ratio, Steer Rate Cost, Kf\033[0m\n\r")
+        with open('/data/autotuner.json', 'r') as file: #read our configuration
+            config_data = json.loads(file.read())
+        kf = float(config_data['kf'])
+        sr = float(config_data['steer_ratio'])
+        src = float(config_data['steer_rate_cost'])
+        print ("    Steer Ratio: ", sr, "\r")
+        print ("    Steer Rate Cost: ", src, "\r")
+        print ("    Kf: ", format(kf , ".8f"), "\n\n\r")
+        nbi.user_input = nbi.input_get()
+        if nbi.user_input == "":
+            nbi.get_input_key()
+        print ("\t\t  *** Pick your inc/dec value ***\n\n\t\t\r")
+        print ("\t\t\t1) Enter a new steering ratio\n\r")
+        print ("\t\t\t2) Tune steering ratio by percentage (Default: 15%, Currently: " + str(srpercent) + ("% \033[92m<-------- selected\033[0m" if selection == 0 else " ") + ")\n\r")
+        print ("\t\t\t3) Tune steering ratio by value. Currently:" + str(srval) + (" \033[92m<-------- selected\033[0m" if selection == 1 else " ") + ")\n\r")
+        print ("\t\t\t4) Enter a new steering rate cost\n\r")
+        print ("\t\t\t5) Tune steering rate cost by percentage (Default: 15%, Currently: " + str(srcpercent) + ("% \033[92m<-------- selected\033[0m" if selection == 2 else " ") + ")\n\r")
+        print ("\t\t\t6) Tune steering rate cost by value. Currently: " + str(srcval) + (" \033[92m<-------- selected\033[0m" if selection == 3 else " ") + ")\n\r")
+        print ("\t\t\t7) Enter a new kf value\n\r")
+        print ("\t\t\t8) Tune kf by percentage (Default: 15%, Currently: " + str(kfpercent) + ("% \033[92m<-------- selected\033[0m" if selection == 4 else " ") + ")\n\r")
+        print ("\t\t\t9) Tune kf by value. Currently: " + str(format(kfval, ".8f")) + (" \033[92m<-------- selected\033[0m" if selection == 5 else " ") + ")\n\r")
+        print ("\t\t\td) decrease\n\r")
+        print ("\t\t\ti) increase\n\r")
+        print ("\t\t\tx) exit\n\r")
+        if nbi.user_input != "":
+            if nbi.user_input == '\x1b': #special keycode escape (possible arrow key)
+                arrow_key = check_for_arrows() # here but not used, saved for future reference
+            with open('/data/autotuner.json', 'r') as file: #read our configuration
+                config_data = json.loads(file.read())
+            if nbi.user_input == "1":
+                selection = 0
+                print ("  * Input your desired steering ratio *")
+                input_history = getcmd()
+                input_history.set_history_file("/data/autotuner/floats_history")
+                input_history.cmdloop()
+                if input_history.result != "":
+                    try:
+                        config_data['steer_ratio'] = format(eval(input_history.result), ".8f")
+                    except:
+                        pass
+            if nbi.user_input == "2":
+                selection = 0
+                print ("  * Input your desired percentage without the symbol *")
+                input_history = getcmd()
+                input_history.set_history_file("/data/autotuner/random_history")
+                input_history.cmdloop()
+                if input_history.result != "":
+                    try:
+                        srpercent = int(eval(input_history.result))
+                    except:
+                        pass
+            if nbi.user_input == "3":
+                selection = 1
+                print ("  * Input your desired value rate *")
+                input_history = getcmd()
+                input_history.set_history_file("/data/autotuner/floats_history")
+                input_history.cmdloop()
+                if input_history.result != "":
+                    try:
+                        srval = format(eval(input_history.result), ".8f")
+                    except:
+                        pass
+            if nbi.user_input == "4":
+                selection = 2
+                print ("  * Input your desired steering rate cost *")
+                input_history = getcmd()
+                input_history.set_history_file("/data/autotuner/floats_history")
+                input_history.cmdloop()
+                if input_history.result != "":
+                    try:
+                        config_data['steer_rate_cost'] = format(eval(input_history.result), ".8f")
+                    except:
+                        pass
+            if nbi.user_input == "5":
+                selection = 2
+                print ("  * Input your desired percentage without the symbol *")
+                input_history = getcmd()
+                input_history.set_history_file("/data/autotuner/random_history")
+                input_history.cmdloop()
+                if input_history.result != "":
+                    try:
+                        srcpercent = int(eval(input_history.result))
+                    except:
+                        pass
+            if nbi.user_input == "6":
+                selection = 3
+                print ("  * Input your desired value rate *")
+                input_history = getcmd()
+                input_history.set_history_file("/data/autotuner/floats_history")
+                input_history.cmdloop()
+                if input_history.result != "":
+                    try:
+                        srcval = format(eval(input_history.result), ".8f")
+                    except:
+                        pass
+            if nbi.user_input == "7":
+                selection = 4
+                print ("  * Input your desired kf value *")
+                input_history = getcmd()
+                input_history.set_history_file("/data/autotuner/floats_history")
+                input_history.cmdloop()
+                if input_history.result != "":
+                    try:
+                        config_data['kf'] = format(eval(input_history.result), ".8f")
+                    except:
+                        pass
+            if nbi.user_input == "8":
+                selection = 4
+                print ("  * Input your desired percentage without the symbol *")
+                input_history = getcmd()
+                input_history.set_history_file("/data/autotuner/random_history")
+                input_history.cmdloop()
+                if input_history.result != "":
+                    try:
+                        kfpercent = int(eval(input_history.result))
+                    except:
+                        pass
+            if nbi.user_input == "9":
+                selection = 5
+                print ("  * Input your desired value rate *")
+                input_history = getcmd()
+                input_history.set_history_file("/data/autotuner/floats_history")
+                input_history.cmdloop()
+                if input_history.result != "":
+                    try:
+                        kfval = format(eval(input_history.result), ".8f")
+                    except:
+                        pass
+            if nbi.user_input == "d":
+                if selection == 0:
+                    sr = abs(( float(sr) * (srpercent/100) ) - float(sr))
+                    config_data['steer_ratio'] = str(sr)
+                if selection == 1:
+                    config_data['steer_ratio'] = str(float(sr) - float(srval))
+                if selection == 2:
+                    src = abs(( float(src) * (srcpercent/100) ) - float(src))
+                    config_data['steer_rate_cost'] = str(src)
+                if selection == 3:
+                    config_data['steer_rate_cost'] = str(float(src) - float(srcval))
+                if selection == 4:
+                    kf = abs(( float(kf) * (kfpercent/100) ) - float(kf))
+                    config_data['kf'] = str(kf)
+                if selection == 5:
+                    config_data['kf'] = str(float(kf) - float(kfval))
+            if nbi.user_input == "i":
+                if selection == 0:
+                    sr = abs(( float(sr) * (srpercent/100) ) + float(sr))
+                    config_data['steer_ratio'] = str(sr)
+                if selection == 1:
+                    config_data['steer_ratio'] = str(float(sr) + float(srval))
+                if selection == 2:
+                    src = abs(( float(src) * (srcpercent/100) ) + float(src))
+                    config_data['steer_rate_cost'] = str(src)
+                if selection == 3:
+                    config_data['steer_rate_cost'] = str(float(src) + float(srcval))
+                if selection == 4:
+                    kf = abs(( float(kf) * (kfpercent/100) ) + float(kf))
+                    config_data['kf'] = str(kf)
+                if selection == 5:
+                    config_data['kf'] = str(float(kf) + float(kfval))
+            if nbi.user_input == "x":
+                nbi.menuscreen = "main"
+                return
+            with open('/data/autotuner.tmp', 'w', encoding='utf8') as file:
+                json.dump(config_data, file, indent=2, sort_keys=True, separators=(',', ': '), ensure_ascii=False)
+                file.flush()
+            shutil.move("/data/autotuner.tmp", "/data/autotuner.json") #change it as main config file
+        time.sleep(0.4)
 #######################################################################################
 def BP_V_Ki_Kp_screen():
     system('clear')
@@ -327,6 +511,7 @@ def change_KpKi_tuning_entry():
         config_data = json.loads(file.read())
     BPV_list = eval(config_data['torqueBPV'])
     exit_condition = False
+    percentage = 15
     selection_cases = [0.1, 0.01, 0.001, 0.0001]
     selection = 0
     divider = 3.3333
@@ -346,8 +531,9 @@ def change_KpKi_tuning_entry():
         print ("\t\t\t2) 0.01" + (" <-------- selected" if selection == 1 else " ") + "\n\r")
         print ("\t\t\t3) 0.001" + (" <-------- selected" if selection == 2 else " ") + "\n\r")
         print ("\t\t\t4) 0.0001" + (" <-------- selected" if selection == 3 else " ") + "\n\r")
-        print ("\t\t\t5) Change Ki divider? (Default: 3.3333, Currently:" + str(divider) + ")\n\r")
-        print ("\t\t\t6) Include breakpoint in calculation? (Currently: " + bp_included + ")\n\r")
+        print ("\t\t\t5) Change by percentage? (Default: 15%, Currently: " + str(percentage) + "%)" + (" <-------- selected" if selection == 4 else " ") + "\n\r")
+        print ("\t\t\t6) Change Ki divider? (Default: 3.3333, Currently: " + str(divider) + ")\n\r")
+        print ("\t\t\t7) Include breakpoint in calculation? (Currently: " + bp_included + ")\n\r")
         print ("\t\t\td) decrease\n\r")
         print ("\t\t\ti) increase\n\r")
         print ("\t\t\tx) exit\n\r")
@@ -367,6 +553,18 @@ def change_KpKi_tuning_entry():
             if nbi.user_input == "4":
                 selection = 3
             if nbi.user_input == "5":
+                selection = 4
+                print ("  * Enter percentage, without the symbol *")
+                input_history = getcmd()
+                input_history.set_history_file("/data/autotuner/floats_history")
+                input_history.cmdloop()
+                if input_history.result != "":
+                    try:
+                        percentage = int(input_history.result)
+                        continue
+                    except:
+                      pass
+            if nbi.user_input == "6":
                 print ("  * Input your desired float *")
                 input_history = getcmd()
                 input_history.set_history_file("/data/autotuner/floats_history")
@@ -377,7 +575,7 @@ def change_KpKi_tuning_entry():
                         continue
                     except:
                       pass
-            if nbi.user_input == "6":
+            if nbi.user_input == "7":
                 if ( len(BPV_list[0]) > 3 ):
                     bp_included = "Disabled due to larger list"
                 else:
@@ -386,9 +584,19 @@ def change_KpKi_tuning_entry():
                     else:
                         bp_included = "no"
             if nbi.user_input == "d":
-                KpKi_list[0][0] = round(float(KpKi_list[0][0]) - selection_cases[selection], 5)
+                if selection == 4:
+                    old_kp = KpKi_list[0][0]
+                    new_kp = abs(( float(old_kp) * (percentage/100) ) - float(old_kp))
+                    KpKi_list[0][0] = round(new_kp ,5)
+                else:
+                    KpKi_list[0][0] = round(float(KpKi_list[0][0]) - selection_cases[selection], 5)
             if nbi.user_input == "i":
-                KpKi_list[0][0] = round(float(KpKi_list[0][0]) + selection_cases[selection], 5)
+                if selection == 4:
+                    old_kp = KpKi_list[0][0]
+                    new_kp = abs(( float(old_kp) * (percentage/100) ) + float(old_kp))
+                    KpKi_list[0][0] = round(new_kp ,5)
+                else:
+                    KpKi_list[0][0] = round(float(KpKi_list[0][0]) + selection_cases[selection], 5)
             if nbi.user_input == "x":
                 return
             if bp_included == "yes":
@@ -468,3 +676,6 @@ if __name__ == '__main__':
             nbi.user_input = ""
             BP_V_Ki_Kp_screen()
 
+        while nbi.menuscreen == "KfSrSrc":
+            nbi.user_input = ""
+            KfSrSrc_screen()
