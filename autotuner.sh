@@ -39,7 +39,8 @@ done
 patchCounter=0
 for f in /data/openpilot/selfdrive/car/honda/carcontroller.py \
          /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py \
-         /data/openpilot/selfdrive/controls/lib/pid.py
+         /data/openpilot/selfdrive/controls/lib/pid.py \
+         /data/openpilot/selfdrive/controls/lib/pathplanner.py
 do
   if ( ! grep -Fxq "from autotuner_config import autotuner_config" $f )
     then
@@ -82,12 +83,38 @@ fi
 #####################################################################################################################################################################
 if ( ! grep -Fq "self.k_f = float(format(eval(autotuner_config.get" /data/openpilot/selfdrive/controls/lib/pid.py )
   then
-    sed -i '/def update(self/a \    self.k_f = float(format(eval(autotuner_config.get("kf", str(format(self.k_f, ".5f")))), ".5f"))' /data/openpilot/selfdrive/controls/lib/pid.py
+    sed -i '/def update(self/a \    self.k_f = float(format(eval(autotuner_config.get("kf", str(format(self.k_f, ".8f")))), ".8f"))' /data/openpilot/selfdrive/controls/lib/pid.py
     ((patchCounter+=1))
 fi
 if ( ! grep -Fq "CP.lateralTuning.pid.kf = float(format(eval(autotuner_config.get" /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py )
   then
-    sed -i '/def update(self/a \    CP.lateralTuning.pid.kf = float(format(eval(autotuner_config.get("kf", str(format(CP.lateralTuning.pid.kf, ".5f")))), ".5f"))' /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
+    sed -i '/def update(self/a \    CP.lateralTuning.pid.kf = float(format(eval(autotuner_config.get("kf", str(format(CP.lateralTuning.pid.kf, ".8f")))), ".8f"))' /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
+    ((patchCounter+=1))
+fi
+#####################################################################################################################################################################
+##### PATCH STEER RATIO #############################################################################################################################################
+#####################################################################################################################################################################
+if ( ! grep -Fq "CP.steerRatio = float(format(eval(autotuner_config.get" /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py )
+  then
+    sed -i '/def update(self/a \    CP.steerRatio = float(format(eval(autotuner_config.get("steer_ratio", str(format(CP.steerRatio, ".8f")))), ".8f"))' /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
+    ((patchCounter+=1))
+fi
+#####################################################################################################################################################################
+##### PATCH STEER_RATE_COST #########################################################################################################################################
+#####################################################################################################################################################################
+if ( ! grep -Fq "CP.steerRateCost = float(format(eval(autotuner_config.get" /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py )
+  then
+    sed -i '/def update(self/a \    CP.steerRateCost = float(format(eval(autotuner_config.get("steer_rate_cost", str(format(CP.steerRateCost, ".8f")))), ".8f"))' /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
+    echo "UPDATED!!!!!!!!!!!!!!!!!"
+    ((patchCounter+=1))
+fi
+#####################################################################################################################################################################
+##### PATCH LANE_CHANGE_SPEED & TIME ################################################################################################################################
+#####################################################################################################################################################################
+if ( ! grep -Fq "LANE_CHANGE_SPEED_MIN = int(eval(autotuner_config.get" /data/openpilot/selfdrive/controls/lib/pathplanner.py )
+  then
+    sed -i 's/LANE_CHANGE_SPEED_MIN = .*/LANE_CHANGE_SPEED_MIN = int(eval(autotuner_config.get("lane_change_speed", str(45)))) * CV.MPH_TO_MS/g' /data/openpilot/selfdrive/controls/lib/pathplanner.py
+    sed -i 's/LANE_CHANGE_TIME_MAX = .*/LANE_CHANGE_TIME_MAX = int(eval(autotuner_config.get("lane_change_time_max", str(10))))/g' /data/openpilot/selfdrive/controls/lib/pathplanner.py
     ((patchCounter+=1))
 fi
 #####################################################################################################################################################################
