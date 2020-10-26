@@ -293,6 +293,7 @@ def BP_V_Ki_Kp_screen():
     print ("\t\t\t3) Tune Kp and Ki\n\r")
     print ("\t\t\t4) Tune Midpoint of BP\n\r")
     print ("\t\t\t5) Tune Kf\n\r")
+    print ("\t\t\t6) Toggle an estimated KP\n\r")
     print ("\t\t\tx) exit\n\r")
     if nbi.user_input == "1":
         change_BPV_list_entry()
@@ -304,6 +305,24 @@ def BP_V_Ki_Kp_screen():
         change_Midpoint_BP_tuning_entry()
     if nbi.user_input == "5":
         change_Kf_tuning_entry()
+    if nbi.user_input == "6":
+        with open('/data/autotuner.json', 'r') as file: #read our configuration
+            config_data = json.loads(file.read())
+        BPV_list = eval(config_data['torqueBPV'])
+        KpKi_list = eval(config_data['pidKpKi'])
+        global estimated_kp_select
+        estimated_kp_select = not estimated_kp_select
+        if estimated_kp_select:
+            KpKi_list[0][0] = round((3840/BPV_list[0][-1]/1.04166669270833), 5)
+            KpKi_list[1][0] = round((3840/BPV_list[0][-1]/1.04166669270833)/3, 5)
+        else:
+            KpKi_list[0][0] = round((3840/BPV_list[0][-1]/2.69416964849505), 5)
+            KpKi_list[1][0] = round((3840/BPV_list[0][-1]/2.69416964849505)/3, 5)
+        config_data['pidKpKi'] = str(KpKi_list)
+        with open('/data/autotuner.tmp', 'w', encoding='utf8') as file:
+            json.dump(config_data, file, indent=2, sort_keys=True, separators=(',', ': '), ensure_ascii=False)
+            file.flush()
+        shutil.move("/data/autotuner.tmp", "/data/autotuner.json") #change it as main config file
     if nbi.user_input == "x":
         nbi.menuscreen = "main"
     time.sleep(0.2)
@@ -317,7 +336,8 @@ def refresh_BPVKPKI_list():
     print ("  torqueBP: ", BPV_list[0], "\r")
     print ("   torqueV: ", BPV_list[1], "\r")
     print ("    pid.kp: ", KpKi_list[0], "\r")
-    print ("    pid.ki: ", KpKi_list[1], "\n\n\r")
+    print ("    pid.ki: ", KpKi_list[1], "\r")
+    print ("    Estimated KP values: " + str(round(3840/BPV_list[0][-1]/1.04166669270833, 5)) + ", " + str(round(3840/BPV_list[0][-1]/2.69416964849505, 5)) + "\n\n\r")
 #######################################################################################
 def check_for_arrows(): # '\x1b'
     nbi.user_input = nbi.input_get()
@@ -666,6 +686,7 @@ def change_KpKi_list_entry():
 #######################################################################################
 if __name__ == '__main__':
     nbi = TMGTuner()
+    estimated_kp_select = 0
     finished_processing = False
     while not finished_processing:
         while nbi.menuscreen == "main":
