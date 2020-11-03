@@ -4,16 +4,12 @@ import sys
 import shutil
 
 class autotuner_config:
-  counter = 0
 
   def __init__(self):
     self.file_path = '/data/autotuner.json'
 
 
   def get(self, key, default):
-    autotuner_config.counter += 1
-    with open('/data/test.counter', 'w', encoding='utf8') as file:
-        file.write(str(autotuner_config.counter))
     if not os.path.exists(self.file_path): #create dictionary if it doesn't exist
       dictionary = {
                    }
