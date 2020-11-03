@@ -1,8 +1,12 @@
 from os import system
 import threading
+import signal
 import subprocess
+from subprocess import Popen, PIPE
 import sys, termios, tty, os, time, json, queue, shutil
 import cmd, readline
+import os.path
+from os import path
 
 class getcmd(cmd.Cmd):
     history_file = ""
@@ -86,6 +90,7 @@ def main_screen():
     print ("\n\n\n\r\t\t\033[1m\033[4mWhat would you like to mod today?\033[0m\n\n\r")
     print ("\t\t\t1) BP, V, Kp, Ki\n\r")
     print ("\t\t\t2) Kf, Steer Ratio, Steer Rate Cost\n\r")
+    print ("\t\t\tF) Load AutoECU\n\r")
     print ("\t\t\tx) exit\n\r")
     print ("\n\n\n\n\r")
 
@@ -95,11 +100,39 @@ def main_screen():
     if nbi.user_input == "2":
         nbi.menuscreen = "KfSrSrc"
 
+    if nbi.user_input == "F":
+        nbi.menuscreen = "autoecu_menu"
+
     if nbi.user_input == "x":
         os.system('stty sane')
         sys.exit(0)
 
     time.sleep(0.2)
+#######################################################################################
+def autoecu_signal_handler(sig, frame):
+    print ("\n\t\tREBOOT COMMA AND RESTART CAR WHEN FLASHING IS 'COMPLETE'!\r")
+
+def autoecu_menu():
+    subprocess.call(["pkill", "./manager.py"])
+    system('clear')
+    signal.signal(signal.SIGINT, autoecu_signal_handler)
+    signal.signal(signal.SIGQUIT, autoecu_signal_handler)
+    signal.signal(signal.SIGTSTP, autoecu_signal_handler)
+    print ("\n\n\n\r\t\t\033[1m\033[4mAutoECU Loading...\033[0m\n\n\r")
+    process = subprocess.Popen(["pm", "list", "packages", "chrome"], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+    output, err = process.communicate()
+    process.terminate()
+    if output != b'package:com.android.chrome\n':
+        print ("\t\tInstalling Chrome...\n\r")
+        subprocess.call(["cp", "-rf", "/data/autotuner/chrome.apk", "/storage/emulated/0/"], stdout=PIPE)
+        subprocess.call(["pm", "install", "-r", "-d", "/storage/emulated/0/chrome.apk"], stdout=PIPE)
+        print ("\n\t\tChrome Installed! Loading...\n\r")
+    subprocess.call(["pkill", "chrome"])
+    subprocess.call(["rm", "-rf", "/data/data/com.android.chrome/app_tabs/0"])
+    subprocess.call(["am", "start", "-n", "com.android.chrome/com.google.android.apps.chrome.Main", "-d", "autoecu.io"], stdout=PIPE)
+    print ("\n\t\tREBOOT COMMA AND RESTART CAR WHEN FLASHING IS 'COMPLETE'!\r")
+    while True:
+        time.sleep(2) # Don't exit, do nothing
 #######################################################################################
 def KfSrSrc_screen():
     exit_condition = False
@@ -526,6 +559,89 @@ def change_Midpoint_BP_tuning_entry():
             shutil.move("/data/autotuner.tmp", "/data/autotuner.json") #change it as main config file
         time.sleep(0.2)
 #######################################################################################
+def change_Ki_tuning_entry():
+    with open('/data/autotuner.json', 'r') as file: #read our configuration
+        config_data = json.loads(file.read())
+    BPV_list = eval(config_data['torqueBPV'])
+    exit_condition = False
+    percentage = 15
+    selection_cases = [0.1, 0.01, 0.001, 0.0001]
+    selection = 0
+    while exit_condition == False:
+        system('clear')
+        print ("\n\n\n\r\t\t\t     *** \033[1m\033[4mKI TUNER\033[0m ***\r")
+        refresh_BPVKPKI_list()
+        nbi.user_input = nbi.input_get()
+        if nbi.user_input == "":
+            nbi.get_input_key()
+        print ("\t\t  *** Pick your inc/dec value ***\n\n\t\t\r")
+        print ("\t\t0) Set Ki initial value\r")
+        print ("\t\t1) 0.1" + (" <-------- selected" if selection == 0 else " ") + "\r")
+        print ("\t\t2) 0.01" + (" <-------- selected" if selection == 1 else " ") + "\r")
+        print ("\t\t3) 0.001" + (" <-------- selected" if selection == 2 else " ") + "\r")
+        print ("\t\t4) 0.0001" + (" <-------- selected" if selection == 3 else " ") + "\r")
+        print ("\t\t5) Change by percentage? (Def: 15%, Cur: " + str(percentage) + "%)" + (" <-------- selected" if selection == 4 else " ") + "\r")
+        print ("\t\td) decrease\r")
+        print ("\t\ti) increase\r")
+        print ("\t\tx) exit\r")
+        if nbi.user_input != "":
+            if nbi.user_input == '\x1b': #special keycode escape (possible arrow key)
+                arrow_key = check_for_arrows() # here but not used, saved for future reference
+            KpKi_list = eval(config_data['pidKpKi'])
+            if nbi.user_input == "0":
+                print ("  * Input your desired float *")
+                input_history = getcmd()
+                input_history.set_history_file("/data/autotuner/floats_history")
+                input_history.cmdloop()
+                if input_history.result != "":
+                    try:
+                        KpKi_list[1][0] = abs(round(float(input_history.result), 5))
+                        config_data['pidKpKi'] = str(KpKi_list)
+                    except:
+                      pass
+            if nbi.user_input == "1":
+                selection = 0
+            if nbi.user_input == "2":
+                selection = 1
+            if nbi.user_input == "3":
+                selection = 2
+            if nbi.user_input == "4":
+                selection = 3
+            if nbi.user_input == "5":
+                selection = 4
+                print ("  * Enter percentage, without the symbol *")
+                input_history = getcmd()
+                input_history.set_history_file("/data/autotuner/floats_history")
+                input_history.cmdloop()
+                if input_history.result != "":
+                    try:
+                        percentage = int(input_history.result)
+                        continue
+                    except:
+                      pass
+            if nbi.user_input == "d":
+                if selection == 4:
+                    old_ki = KpKi_list[1][0]
+                    new_ki = abs(( float(old_ki) * (percentage/100) ) - float(old_ki))
+                    KpKi_list[1][0] = round(new_ki ,5)
+                else:
+                    KpKi_list[1][0] = round(float(KpKi_list[1][0]) - selection_cases[selection], 5)
+            if nbi.user_input == "i":
+                if selection == 4:
+                    old_ki = KpKi_list[1][0]
+                    new_ki = abs(( float(old_ki) * (percentage/100) ) + float(old_ki))
+                    KpKi_list[1][0] = round(new_ki ,5)
+                else:
+                    KpKi_list[1][0] = round(float(KpKi_list[1][0]) + selection_cases[selection], 5)
+            if nbi.user_input == "x":
+                return
+            config_data['pidKpKi'] = str(KpKi_list)
+            with open('/data/autotuner.tmp', 'w', encoding='utf8') as file:
+                json.dump(config_data, file, indent=2, sort_keys=True, separators=(',', ': '), ensure_ascii=False)
+                file.flush()
+            shutil.move("/data/autotuner.tmp", "/data/autotuner.json") #change it as main config file
+        time.sleep(0.2)
+#######################################################################################
 def change_KpKi_tuning_entry():
     with open('/data/autotuner.json', 'r') as file: #read our configuration
         config_data = json.loads(file.read())
@@ -536,7 +652,7 @@ def change_KpKi_tuning_entry():
     selection = 0
     divider = 3.3333
     if ( len(BPV_list[0]) > 3 ):
-        bp_included = "Disabled due to larger list"
+        bp_included = "Disabled, requires 3 BP max"
     else:
         bp_included = "no"
     while exit_condition == False:
@@ -547,23 +663,33 @@ def change_KpKi_tuning_entry():
         if nbi.user_input == "":
             nbi.get_input_key()
         print ("\t\t  *** Pick your inc/dec value ***\n\n\t\t\r")
-        print ("\t\t\t1) 0.1" + (" <-------- selected" if selection == 0 else " ") + "\n\r")
-        print ("\t\t\t2) 0.01" + (" <-------- selected" if selection == 1 else " ") + "\n\r")
-        print ("\t\t\t3) 0.001" + (" <-------- selected" if selection == 2 else " ") + "\n\r")
-        print ("\t\t\t4) 0.0001" + (" <-------- selected" if selection == 3 else " ") + "\n\r")
-        print ("\t\t\t5) Change by percentage? (Default: 15%, Currently: " + str(percentage) + "%)" + (" <-------- selected" if selection == 4 else " ") + "\n\r")
-        print ("\t\t\t6) Change Ki divider? (Default: 3.3333, Currently: " + str(divider) + ")\n\r")
-        print ("\t\t\t7) Include breakpoint in calculation? (Currently: " + bp_included + ")\n\r")
-        print ("\t\t\td) decrease\n\r")
-        print ("\t\t\ti) increase\n\r")
-        print ("\t\t\tx) exit\n\r")
+        print ("\t\t0) Set Kp initial value\r")
+        print ("\t\t1) 0.1" + (" <-------- selected" if selection == 0 else " ") + "\r")
+        print ("\t\t2) 0.01" + (" <-------- selected" if selection == 1 else " ") + "\r")
+        print ("\t\t3) 0.001" + (" <-------- selected" if selection == 2 else " ") + "\r")
+        print ("\t\t4) 0.0001" + (" <-------- selected" if selection == 3 else " ") + "\r")
+        print ("\t\t5) Change by percentage? (Def: 15%, Cur: " + str(percentage) + "%)" + (" <-------- selected" if selection == 4 else " ") + "\r")
+        print ("\t\t6) Change Ki divider? (Def: 3.3333, Cur: " + str(divider) + ")\r")
+        print ("\t\t7) Include BP in calculation? (Cur: " + bp_included + ")\r")
+        print ("\t\t8) Manually adjust Ki\r")
+        print ("\t\td) decrease\r")
+        print ("\t\ti) increase\r")
+        print ("\t\tx) exit\r")
         if nbi.user_input != "":
             if nbi.user_input == '\x1b': #special keycode escape (possible arrow key)
                 arrow_key = check_for_arrows() # here but not used, saved for future reference
-            with open('/data/autotuner.json', 'r') as file: #read our configuration
-                config_data = json.loads(file.read())
             KpKi_list = eval(config_data['pidKpKi'])
-            BPV_list = eval(config_data['torqueBPV'])
+            if nbi.user_input == "0":
+                print ("  * Input your desired float *")
+                input_history = getcmd()
+                input_history.set_history_file("/data/autotuner/floats_history")
+                input_history.cmdloop()
+                if input_history.result != "":
+                    try:
+                        KpKi_list[0][0] = abs(round(float(input_history.result), 5))
+                        config_data['pidKpKi'] = str(KpKi_list)
+                    except:
+                      pass
             if nbi.user_input == "1":
                 selection = 0
             if nbi.user_input == "2":
@@ -603,6 +729,8 @@ def change_KpKi_tuning_entry():
                         bp_included = "yes"
                     else:
                         bp_included = "no"
+            if nbi.user_input == "8":
+                change_Ki_tuning_entry()
             if nbi.user_input == "d":
                 if selection == 4:
                     old_kp = KpKi_list[0][0]
@@ -684,7 +812,35 @@ def change_KpKi_list_entry():
             print ("\t\t\tInvalid entry, try again...")
             time.sleep(1.0)
 #######################################################################################
+def do_nothing_on_signal(sig, frame):
+    print ("") #Do nothing
 if __name__ == '__main__':
+    subprocess.call(["bash", "autotuner.sh"], cwd="/data")
+    subprocess.call(["bash", "autotuner.sh"], cwd="/data")
+    subprocess.call(["bash", "autotuner.sh"], cwd="/data")
+
+    signal.signal(signal.SIGINT, do_nothing_on_signal)
+    signal.signal(signal.SIGQUIT, do_nothing_on_signal)
+    signal.signal(signal.SIGTSTP, do_nothing_on_signal)
+
+    if not path.exists("/system/comma/home/autotuner.py"):
+        subprocess.call(["su", "root", "mount", "-o", "rw,remount,rw", "/system"])
+        subprocess.call(["su", "root", "rm", "/system/comma/home/autotuner.py"], stdout=PIPE)
+        with open('/system/comma/home/autotuner.py', 'w') as f:
+            f.write("import subprocess\nimport signal\ndef signal_handler(sig, frame):\n    print ("")\nsignal.signal(signal.SIGINT, signal_handler)\nsignal.signal(signal.SIGQUIT, signal_handler)\nsignal.signal(signal.SIGTSTP, signal_handler)\nsubprocess.call([\"python\", \"autotuner.py\"], cwd=\"/data\")")
+        subprocess.call(["mount", "-o", "ro,remount,ro", "/system"])
+        subprocess.call(["sync"], stdout=PIPE)
+        os.system('stty sane')
+        sys.exit(0)
+
+    if not path.exists("/data/openpilot/autotuner.py"):
+        subprocess.call(["su", "root", "rm", "/system/comma/home/autotuner.py"], stdout=PIPE)
+        with open('/data/openpilot/autotuner.py', 'w') as f:
+            f.write("import subprocess\nimport signal\ndef signal_handler(sig, frame):\n    print ("")\nsignal.signal(signal.SIGINT, signal_handler)\nsignal.signal(signal.SIGQUIT, signal_handler)\nsignal.signal(signal.SIGTSTP, signal_handler)\nsubprocess.call([\"python\", \"autotuner.py\"], cwd=\"/data\")")
+        subprocess.call(["sync"], stdout=PIPE)
+        os.system('stty sane')
+        sys.exit(0)
+
     nbi = TMGTuner()
     estimated_kp_select = 0
     finished_processing = False
@@ -700,3 +856,8 @@ if __name__ == '__main__':
         while nbi.menuscreen == "KfSrSrc":
             nbi.user_input = ""
             KfSrSrc_screen()
+
+        while nbi.menuscreen == "autoecu_menu":
+            nbi.user_input = ""
+            autoecu_menu()
+

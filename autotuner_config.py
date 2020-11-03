@@ -4,12 +4,16 @@ import sys
 import shutil
 
 class autotuner_config:
+  counter = 0
 
   def __init__(self):
     self.file_path = '/data/autotuner.json'
 
 
   def get(self, key, default):
+    autotuner_config.counter += 1
+    with open('/data/test.counter', 'w', encoding='utf8') as file:
+        file.write(str(autotuner_config.counter))
     if not os.path.exists(self.file_path): #create dictionary if it doesn't exist
       dictionary = {
                    }
@@ -134,22 +138,22 @@ if len(sys.argv) > 1:
         continue
 
     if sys.argv[i] == "SET.MP1":
+      BPV_list = eval(config_data['torqueBPV'])
       try:
         if ( len(BPV_list[0]) != 3 ):
           print ("Only 3 value lists are supported")
           continue
-        BPV_list = eval(config_data['torqueBPV'])
         BPV_list[0][1] = round(float(sys.argv[i+1]))
         config_data['torqueBPV'] = str(BPV_list)
       except KeyError:
         continue
 
     if sys.argv[i] == "SET.MP2":
+      BPV_list = eval(config_data['torqueBPV'])
       try:
         if ( len(BPV_list[1]) != 3 ):
           print ("Only 3 value lists are supported")
           continue
-        BPV_list = eval(config_data['torqueBPV'])
         BPV_list[1][1] = round(float(sys.argv[i+1]))
         config_data['torqueBPV'] = str(BPV_list)
       except KeyError:
