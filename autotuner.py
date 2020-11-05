@@ -74,12 +74,6 @@ class TMGTuner:
             return_value = self.input_queue.get()
         return return_value
 
-
-
-
-
-
-
 #######################################################################################
 def main_screen():
     nbi.user_input = nbi.input_get()
@@ -113,7 +107,6 @@ def autoecu_signal_handler(sig, frame):
     print ("\n\t\tREBOOT COMMA AND RESTART CAR WHEN FLASHING IS 'COMPLETE'!\r")
 
 def autoecu_menu():
-    subprocess.call(["pkill", "./manager.py"])
     system('clear')
     signal.signal(signal.SIGINT, autoecu_signal_handler)
     signal.signal(signal.SIGQUIT, autoecu_signal_handler)
@@ -130,9 +123,17 @@ def autoecu_menu():
     subprocess.call(["pkill", "chrome"])
     subprocess.call(["rm", "-rf", "/data/data/com.android.chrome/app_tabs/0"])
     subprocess.call(["am", "start", "-n", "com.android.chrome/com.google.android.apps.chrome.Main", "-d", "autoecu.io"], stdout=PIPE)
+    _autoecu_thread = threading.Thread(target=autoecu_thread, args=(), daemon=True).start()
+    time.sleep(5)
     print ("\n\t\tREBOOT COMMA AND RESTART CAR WHEN FLASHING IS 'COMPLETE'!\r")
     while True:
-        time.sleep(2) # Don't exit, do nothing
+        time.sleep(5) # Don't exit, do nothing
+
+def autoecu_thread():
+    subprocess.call(["pkill", "./manager.py"])
+    print ("\n\n\n\r\t\tmanager.py killed.\n\r")
+    while True:
+        time.sleep(5) # Don't exit, do nothing
 #######################################################################################
 def KfSrSrc_screen():
     exit_condition = False
@@ -166,7 +167,7 @@ def KfSrSrc_screen():
         print ("\t\t\t6) Tune steering rate cost by value. Currently: " + str(srcval) + (" \033[92m<-------- selected\033[0m" if selection == 3 else " ") + ")\n\r")
         print ("\t\t\t7) Enter a new kf value\n\r")
         print ("\t\t\t8) Tune kf by percentage (Default: 15%, Currently: " + str(kfpercent) + ("% \033[92m<-------- selected\033[0m" if selection == 4 else " ") + ")\n\r")
-        print ("\t\t\t9) Tune kf by value. Currently: " + str(format(kfval, ".8f")) + (" \033[92m<-------- selected\033[0m" if selection == 5 else " ") + ")\n\r")
+        print ("\t\t\t9) Tune kf by value. Currently: " + str(kfval) + (" \033[92m<-------- selected\033[0m" if selection == 5 else " ") + ")\n\r")
         print ("\t\t\td) decrease\n\r")
         print ("\t\t\ti) increase\n\r")
         print ("\t\t\tx) exit\n\r")
@@ -271,7 +272,7 @@ def KfSrSrc_screen():
                 input_history.cmdloop()
                 if input_history.result != "":
                     try:
-                        kfval = format(eval(input_history.result), ".8f")
+                        kfval = format(float(eval(input_history.result)), ".8f")
                     except:
                         pass
             if nbi.user_input == "d":
@@ -812,16 +813,16 @@ def change_KpKi_list_entry():
             print ("\t\t\tInvalid entry, try again...")
             time.sleep(1.0)
 #######################################################################################
-def do_nothing_on_signal(sig, frame):
-    print ("") #Do nothing
+#def do_nothing_on_signal(sig, frame):
+#    print ("") #Do nothing
 if __name__ == '__main__':
     subprocess.call(["bash", "autotuner.sh"], cwd="/data")
     subprocess.call(["bash", "autotuner.sh"], cwd="/data")
     subprocess.call(["bash", "autotuner.sh"], cwd="/data")
 
-    signal.signal(signal.SIGINT, do_nothing_on_signal)
-    signal.signal(signal.SIGQUIT, do_nothing_on_signal)
-    signal.signal(signal.SIGTSTP, do_nothing_on_signal)
+#    signal.signal(signal.SIGINT, do_nothing_on_signal)
+#    signal.signal(signal.SIGQUIT, do_nothing_on_signal)
+#    signal.signal(signal.SIGTSTP, do_nothing_on_signal)
 
     if not path.exists("/system/comma/home/autotuner.py"):
         subprocess.call(["su", "root", "mount", "-o", "rw,remount,rw", "/system"])
