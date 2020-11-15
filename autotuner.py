@@ -84,6 +84,7 @@ def main_screen():
     print ("\n\n\n\r\t\t\033[1m\033[4mWhat would you like to mod today?\033[0m\n\n\r")
     print ("\t\t\t1) BP, V, Kp, Ki\n\r")
     print ("\t\t\t2) Kf, Steer Ratio, Steer Rate Cost\n\r")
+    print ("\t\t\tC) Configure Firmware\n\r")
     print ("\t\t\tF) Load AutoECU\n\r")
     print ("\t\t\tx) exit\n\r")
     print ("\n\n\n\n\r")
@@ -96,6 +97,9 @@ def main_screen():
 
     if nbi.user_input == "F":
         nbi.menuscreen = "autoecu_menu"
+
+    if nbi.user_input == "C":
+        subprocess.call(["python", "/data/autotuner/autoecu.py"], cwd='/data/autotuner')
 
     if nbi.user_input == "x":
         os.system('stty sane')
