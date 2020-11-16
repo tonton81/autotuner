@@ -25,6 +25,7 @@ mod_filter_rows = []
 userbin_hash = 0
 debug_eps_tool = 0
 detected_model = 0
+forced_model = 0
 
 class getcmd(cmd.Cmd):
     history_file = ""
@@ -106,6 +107,61 @@ with open("/data/autotuner/user.bin",'rb+') as u:
     userbin_hash = hashlib.md5(userbin).hexdigest()
     if debug_eps_tool:
         print ("\nFirmware Hash: " + str(userbin_hash) + "\n")
+
+
+def forced_table(input_model):
+    global forced_model
+    global mod_table_rows
+    global mod_filter_rows
+    global mod_speed_clamp
+    forced_model = 0
+    with open("/data/autotuner/eps_tool.py",'r') as f:
+        section_found = 0
+        table_row_check = 0
+        table_rows_found = 0
+        forced_table_rows = []
+        eps_tool = f.readlines()
+        for line in eps_tool:
+            if "Detected bin:" in line:
+                if input_model in line:
+                    forced_model = list(re.findall('\'([^\']*)\'', line))
+                    print (str(forced_model[0]))
+                    section_found = 1
+                continue
+            if section_found == 1:
+                if "elif input_bin_hash ==" in line:
+                    section_found = 0
+                    mod_table_rows = deepcopy(forced_table_rows)
+                    return 1
+                    break
+                else:
+                    if "data_old = [" in line:
+                        table_row_check = 1
+                        continue
+                    if table_row_check == 1:
+                        table_row = list(re.findall(r'0x[0-9a-fA-F]+',line))
+                        if len(table_row) == 9:
+                            table_rows_found = 1
+                            print (table_row)
+                            forced_table_rows.append(table_row)
+                            continue
+                        if table_rows_found == 1:
+                            if debug_eps_tool:
+                                print ("'" + str(forced_table_rows[0]).replace("'","").replace("[","").replace("]","") + "'")
+                                print ("'" + str(forced_table_rows[1]).replace("'","").replace("[","").replace("]","") + "'")
+                                print ("'" + str(forced_table_rows[2]).replace("'","").replace("[","").replace("]","") + "'")
+                                print ("'" + str(forced_table_rows[3]).replace("'","").replace("[","").replace("]","") + "'")
+                                print ("'" + str(forced_table_rows[4]).replace("'","").replace("[","").replace("]","") + "'")
+                                print ("'" + str(forced_table_rows[5]).replace("'","").replace("[","").replace("]","") + "'")
+                                print ("'" + str(forced_table_rows[6]).replace("'","").replace("[","").replace("]","") + "'")
+                                print ("")
+                                print (str(len(forced_table_rows)) + " rows.\n")
+                            table_row_check = 0
+        return 0 
+
+
+
+
 
 
 with open("/data/autotuner/eps_tool.py",'r') as f:
@@ -410,7 +466,12 @@ def main_screen():
                 print (", ", end='')
         print ("]\r")
 
-    print ("\n\t\033[32m\033[4mModded torqueBP:\033[0m\033[32m\n\r")
+    if forced_model == 0:
+        modified_table = ""
+    else:
+        modified_table = "(Table from " + str(forced_model[0]).replace("Detected bin: ","") + ")"
+
+    print ("\n\t\033[32m\033[4mModded torqueBP:\033[0m\033[32m" + modified_table + "\n\r")
     for i in range(len(mod_table_rows)):
         print ("\t[", end='')
         for j in range(0, len(mod_table_rows[0])):
@@ -422,6 +483,9 @@ def main_screen():
     print ("\n\t\t\t1) View index and torqueV tables\r")
     print ("\t\t\t2) Steer to " + str(int(mod_speed_clamp[0],16)) + "km/h, (" + str(int(int(mod_speed_clamp[0],16) * 0.621371)) + "mph)\r")
     print ("\t\t\t3) 3 or 9 breakpoints? (Currently: " + str(breakpoints_size) + ")\r")
+    print ("\t\t\t4) Force torque table from another model\r")
+
+
     if breakpoints_size == 3:
         print ("\n[[0, ", end='')
         print (str((int(round(idx_row_chosen[use_idx_row][5] / math.sqrt(3), 0)) << 2)), end='')
@@ -480,6 +544,22 @@ def main_screen():
             breakpoints_size = 3
         else:
             breakpoints_size = 9
+
+
+    if autoecu.user_input == "4":
+        mod_type = ""
+        print ("Enter a firmware model:\r")
+        input_history = getcmd()
+        input_history.set_history_file("/data/autotuner/random_history")
+        input_history.cmdloop()
+        if input_history.result != "":
+            try:
+                forced_table(input_history.result)
+            except:
+                pass
+
+
+
 
     if autoecu.user_input == "k":
         mod_type = "kiril"
