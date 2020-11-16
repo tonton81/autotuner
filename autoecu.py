@@ -5,7 +5,6 @@ import binascii
 import argparse
 import time
 import math
-
 from copy import deepcopy
 from os import system
 import threading
@@ -109,7 +108,7 @@ with open("/data/autotuner/user.bin",'rb+') as u:
         print ("\nFirmware Hash: " + str(userbin_hash) + "\n")
 
 
-with open("eps_tool.py",'r') as f:
+with open("/data/autotuner/eps_tool.py",'r') as f:
     section_found = 0
     speed_clamp_check = 0
     table_row_check = 0
@@ -187,11 +186,9 @@ with open("eps_tool.py",'r') as f:
     if debug_eps_tool:
         print ("CAPTURED STOCK DATA!")
 
-from copy import deepcopy
 mod_table_rows = deepcopy(stock_table_rows)
 mod_filter_rows = deepcopy(stock_filter_rows)
 mod_speed_clamp[0] = "{0:#0{1}x}".format(int(stock_speed_clamp[0][0],16),6)
-
 
 
 idx_row_sedan = []
@@ -243,7 +240,7 @@ max_step = 37.927
 point_1_torque_multiplier = 0
 point_2_torque_multiplier = 0
 point_3_torque_multiplier = 0
-mod_type = 0
+mod_type = ""
 breakpoints_size = 9
 
 
@@ -304,8 +301,8 @@ def kiril_mod(): # 3 point kiril mod
     subprocess.call(["am", "start", "-n", "com.android.chrome/com.google.android.apps.chrome.Main", "-d", show_chart], stdout=PIPE)
 
 def generate_eps_tool():
-    with open("eps_tool_new.py",'w') as n:
-        with open("eps_tool.py",'r') as f:
+    with open("/data/autotuner/eps_tool_new.py",'w') as n:
+        with open("/data/autotuner/eps_tool.py",'r') as f:
             section_found = 0
             speed_clamp_check = 0
             table_row_check = 0
@@ -394,6 +391,9 @@ def main_screen():
     global point_1_torque_multiplier
     global point_2_torque_multiplier
     global point_3_torque_multiplier
+    global mod_table_rows
+    global mod_filter_rows
+    global mod_speed_clamp
     if autoecu.user_input == "":
         autoecu.get_input_key()
 
@@ -450,8 +450,11 @@ def main_screen():
         print ("\t\t           ^-- " + str(round(point_1_torque_multiplier,5)) + "x, " + str(round(point_2_torque_multiplier,5)) + "x, " + str(round(point_3_torque_multiplier,5)) + "x\r")
         print ("\t\t           ^-- Actual: " + str(round(int(mod_table_rows[0][8],16) / int(stock_table_rows[0][8],16),7)) + "x\r")
 
-
-    print ("\n\t\t\tG) Generate RWD\r")
+    print ("\n\t\t\tS) Generate Stock RWD\r")
+    if mod_type != "":
+        print ("\t\t\tG) Generate Modded RWD\r")
+    if path.exists("/data/autotuner/last_rwd.txt"):
+        print ("\t\t\tV) View last RWD details\r")
     print ("\t\t\tx) exit\n\r")
     print ("\n\n\n\n\r")
 
@@ -502,14 +505,154 @@ def main_screen():
 
     if autoecu.user_input == "G":
         system('clear')
-        subprocess.call(["python", "eps_tool_new.py"])
+        subprocess.call(["python", "/data/autotuner/eps_tool_new.py"])
         print ("Press any key to return to menu...")
+        with open('/data/autotuner/last_rwd.txt', 'w') as f:
+
+            f.write("Index table:\n")
+            for i in range(len(idx_row_chosen)):
+                f.write("\t[")
+                for j in range(0, len(idx_row_chosen[0])):
+                    f.write(str(hex(int(round(idx_row_chosen[i][j], 0)))))
+                    if j < len(idx_row_chosen[0]) - 1:
+                        f.write(", ")
+                f.write("]\n")
+
+            f.write("\nStock torqueBP:\n")
+            for i in range(len(stock_table_rows)):
+                f.write("\t[")
+                for j in range(0, len(stock_table_rows[0])):
+                    f.write(str(stock_table_rows[i][j]))
+                    if j < len(stock_table_rows[0]) - 1:
+                        f.write(", ")
+                f.write("]\n")
+
+            f.write("\nModded torqueBP:\n")
+            for i in range(len(mod_table_rows)):
+                f.write("\t[")
+                for j in range(0, len(mod_table_rows[0])):
+                    f.write(str(mod_table_rows[i][j]))
+                    if j < len(mod_table_rows[0]) - 1:
+                        f.write(", ")
+                f.write("]\n")
+
+            f.write("\n3 point breakpoints")
+            f.write("\n\t[[0, ")
+            f.write(str((int(round(idx_row_chosen[use_idx_row][5] / math.sqrt(3), 0)) << 2)))
+            f.write(", 12000],[0, ")
+            f.write(str((int(round(idx_row_chosen[use_idx_row][5] / math.sqrt(3), 0)) << 2)) + ", ")
+            f.write(str((int(round(idx_row_chosen[use_idx_row][8] / math.sqrt(3), 0)) << 2)))
+            f.write("]]\n")
+            f.write("\n9 point breakpoints")
+            f.write("\n\t[[")
+            for j in range(0, len(mod_table_rows[0])):
+                f.write(str((mod_table_rows[use_idx_row][j])))
+                if j < 8:
+                    f.write(",")
+            f.write("],[")
+            for j in range(0, len(idx_row_chosen[0])):
+                f.write(str(hex(int(round(idx_row_chosen[use_idx_row][j] / math.sqrt(3), 0)) << 2)))
+                if j < 8:
+                    f.write(",")
+            f.write("]]\n")
+
+            f.write("\nSteer to " + str(int(mod_speed_clamp[0],16)) + "km/h, (" + str(int(int(mod_speed_clamp[0],16) * 0.621371)) + "mph)\n")
+
+            show_chart = "http://www.plotvar.com/line.php?title=&yaxis=&xvalues=&serie1=Stock&values_serie1=" + stock_table_rows[use_idx_row][0] + "%2C" + stock_table_rows[use_idx_row][1] + "%2C" + stock_table_rows[use_idx_row][2] + "%2C" + stock_table_rows[use_idx_row][3] + "%2C" + stock_table_rows[use_idx_row][4] + "%2C" + stock_table_rows[use_idx_row][5] + "%2C" + stock_table_rows[use_idx_row][6] + "%2C" + stock_table_rows[use_idx_row][7] + "%2C" + stock_table_rows[use_idx_row][8] + "&serie3=Modded&values_serie3=" + mod_table_rows[use_idx_row][0] + "%2C" + mod_table_rows[use_idx_row][1] + "%2C" + mod_table_rows[use_idx_row][2] + "%2C" + mod_table_rows[use_idx_row][3] + "%2C" + mod_table_rows[use_idx_row][4] + "%2C" + mod_table_rows[use_idx_row][5] + "%2C" + mod_table_rows[use_idx_row][6] + "%2C" + mod_table_rows[use_idx_row][7] + "%2C" + mod_table_rows[use_idx_row][8]
+            f.write("\nLine plot:\n" + show_chart + "\n")
+
+            if mod_type == "kiril":
+                f.write("\n kiril mod 3 point <-- step1: " + str(max_step1) + " step2: " + str(max_step2) + " step3: " + str(max_step3) + "\n")
+                f.write("\n kiril mod 3 point <-- " + str(round(point_1_torque_multiplier,5)) + "x, " + str(round(point_2_torque_multiplier,5)) + "x, " + str(round(point_3_torque_multiplier,5)) + "x\n")
+                f.write("\n kiril mod 3 point <-- Actual: " + str(round(int(mod_table_rows[0][8],16) / int(stock_table_rows[0][8],16),7)) + "x\n")
+
         autoecu.user_input = ""
         autoecu.get_input_key()
         while autoecu.user_input == "":
             autoecu.user_input = autoecu.input_get()
+        autoecu.user_input = ""
         shutil.copy("/data/autotuner/user_patched.rwd", "/sdcard/autotuner.rwd")
 
+    if autoecu.user_input == "S":
+        mod_type = ""
+        system('clear')
+        mod_table_rows = deepcopy(stock_table_rows)
+        mod_filter_rows = deepcopy(stock_filter_rows)
+        mod_speed_clamp[0] = "{0:#0{1}x}".format(int(stock_speed_clamp[0][0],16),6)
+        generate_eps_tool()
+        subprocess.call(["python", "/data/autotuner/eps_tool_new.py"])
+        print ("Press any key to return to menu...")
+        with open('/data/autotuner/last_rwd.txt', 'w') as f:
+
+            f.write("Index table:\n")
+            for i in range(len(idx_row_chosen)):
+                f.write("\t[")
+                for j in range(0, len(idx_row_chosen[0])):
+                    f.write(str(hex(int(round(idx_row_chosen[i][j], 0)))))
+                    if j < len(idx_row_chosen[0]) - 1:
+                        f.write(", ")
+                f.write("]\n")
+
+            f.write("\nStock torqueBP:\n")
+            for i in range(len(stock_table_rows)):
+                f.write("\t[")
+                for j in range(0, len(stock_table_rows[0])):
+                    f.write(str(stock_table_rows[i][j]))
+                    if j < len(stock_table_rows[0]) - 1:
+                        f.write(", ")
+                f.write("]\n")
+
+            f.write("\nModded torqueBP:\n")
+            for i in range(len(mod_table_rows)):
+                f.write("\t[")
+                for j in range(0, len(mod_table_rows[0])):
+                    f.write(str(mod_table_rows[i][j]))
+                    if j < len(mod_table_rows[0]) - 1:
+                        f.write(", ")
+                f.write("]\n")
+
+            f.write("\n3 point breakpoints")
+            f.write("\n\t[[0, ")
+            f.write(str((int(round(idx_row_chosen[use_idx_row][5] / math.sqrt(3), 0)) << 2)))
+            f.write(", 12000],[0, ")
+            f.write(str((int(round(idx_row_chosen[use_idx_row][5] / math.sqrt(3), 0)) << 2)) + ", ")
+            f.write(str((int(round(idx_row_chosen[use_idx_row][8] / math.sqrt(3), 0)) << 2)))
+            f.write("]]\n")
+            f.write("\n9 point breakpoints")
+            f.write("\n\t[[")
+            for j in range(0, len(mod_table_rows[0])):
+                f.write(str((mod_table_rows[use_idx_row][j])))
+                if j < 8:
+                    f.write(",")
+            f.write("],[")
+            for j in range(0, len(idx_row_chosen[0])):
+                f.write(str(hex(int(round(idx_row_chosen[use_idx_row][j] / math.sqrt(3), 0)) << 2)))
+                if j < 8:
+                    f.write(",")
+            f.write("]]\n")
+
+            f.write("\nSteer to " + str(int(mod_speed_clamp[0],16)) + "km/h, (" + str(int(int(mod_speed_clamp[0],16) * 0.621371)) + "mph)\n")
+
+            show_chart = "http://www.plotvar.com/line.php?title=&yaxis=&xvalues=&serie1=Stock&values_serie1=" + stock_table_rows[use_idx_row][0] + "%2C" + stock_table_rows[use_idx_row][1] + "%2C" + stock_table_rows[use_idx_row][2] + "%2C" + stock_table_rows[use_idx_row][3] + "%2C" + stock_table_rows[use_idx_row][4] + "%2C" + stock_table_rows[use_idx_row][5] + "%2C" + stock_table_rows[use_idx_row][6] + "%2C" + stock_table_rows[use_idx_row][7] + "%2C" + stock_table_rows[use_idx_row][8] + "&serie3=Modded&values_serie3=" + mod_table_rows[use_idx_row][0] + "%2C" + mod_table_rows[use_idx_row][1] + "%2C" + mod_table_rows[use_idx_row][2] + "%2C" + mod_table_rows[use_idx_row][3] + "%2C" + mod_table_rows[use_idx_row][4] + "%2C" + mod_table_rows[use_idx_row][5] + "%2C" + mod_table_rows[use_idx_row][6] + "%2C" + mod_table_rows[use_idx_row][7] + "%2C" + mod_table_rows[use_idx_row][8]
+            f.write("\nLine plot:\n" + show_chart)
+
+        autoecu.user_input = ""
+        autoecu.get_input_key()
+        while autoecu.user_input == "":
+            autoecu.user_input = autoecu.input_get()
+        autoecu.user_input = ""
+        shutil.copy("/data/autotuner/user_patched.rwd", "/sdcard/autotuner.rwd")
+
+    if autoecu.user_input == "V":
+        system('clear')
+        subprocess.call(["cat", "/data/autotuner/last_rwd.txt"])
+        print ("\n\nPress any key to return to menu...")
+        autoecu.user_input = ""
+        autoecu.get_input_key()
+        while autoecu.user_input == "":
+            autoecu.user_input = autoecu.input_get()
+        autoecu.user_input = ""
+ 
     if autoecu.user_input == "x":
         os.system('stty sane')
         sys.exit(0)
