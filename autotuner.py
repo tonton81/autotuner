@@ -154,9 +154,11 @@ def KfSrSrc_screen():
         with open('/data/autotuner.json', 'r') as file: #read our configuration
             config_data = json.loads(file.read())
         kf = float(config_data['kf'])
-        sr = float(config_data['steer_ratio'])
+        sr = ""
+        if len(config_data['steer_ratio']) > 0:
+          sr = float(config_data['steer_ratio'])
         src = float(config_data['steer_rate_cost'])
-        print ("    Steer Ratio: ", sr, "\r")
+        print ("    Steer Ratio: ", "Dynamic" if len(config_data['steer_ratio']) == 0 else sr, "\tUse '0' to enable OP Dynamic Sr\r")
         print ("    Steer Rate Cost: ", src, "\r")
         print ("    Kf: ", format(kf , ".8f"), "\n\n\r")
         nbi.user_input = nbi.input_get()
@@ -180,6 +182,11 @@ def KfSrSrc_screen():
                 arrow_key = check_for_arrows() # here but not used, saved for future reference
             with open('/data/autotuner.json', 'r') as file: #read our configuration
                 config_data = json.loads(file.read())
+            if nbi.user_input == "0":
+                    try:
+                        config_data['steer_ratio'] = ""
+                    except:
+                        pass
             if nbi.user_input == "1":
                 selection = 0
                 print ("  * Input your desired steering ratio *")
