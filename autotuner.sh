@@ -40,17 +40,20 @@ patchCounter=0
 for f in /data/openpilot/selfdrive/car/honda/carcontroller.py \
          /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py \
          /data/openpilot/selfdrive/controls/lib/pid.py \
-         /data/openpilot/selfdrive/controls/lib/pathplanner.py
+         /data/openpilot/selfdrive/controls/lib/pathplanner.py \
+         /data/openpilot/selfdrive/controls/lib/lateral_planner.py
 do
-  if ( ! grep -Fxq "from autotuner_config import autotuner_config" $f )
+  if [ -f f ]
     then
-      sed -i -e '2i\' -e "autotuner_config = autotuner_config()" $f
-      sed -i -e '2i\' -e "from autotuner_config import autotuner_config" $f
-      sed -i -e '2i\' -e "sys.path.append(\"/data/\")" $f
-      sed -i -e '2i\' -e "import sys" $f
-      sed -i -e '2i\' -e "import json" $f
-      printf "Patched file: %s\n" "$f"
-      ((patchCounter+=1))
+      if ( ! grep -Fxq "from autotuner_config import autotuner_config" $f )
+        then
+          sed -i -e '2i\' -e "autotuner_config = autotuner_config()" $f
+          sed -i -e '2i\' -e "from autotuner_config import autotuner_config" $f
+          sed -i -e '2i\' -e "sys.path.append(\"/data/\")" $f
+          sed -i -e '2i\' -e "import sys" $f
+          printf "Patched file: %s\n" "$f"
+          ((patchCounter+=1))
+      fi
   fi
 done
 #####################################################################################################################################################################
@@ -111,10 +114,19 @@ fi
 #####################################################################################################################################################################
 ##### PATCH LANE_CHANGE_SPEED & TIME ################################################################################################################################
 #####################################################################################################################################################################
-if ( ! grep -Fq "LANE_CHANGE_SPEED_MIN = int(eval(autotuner_config.get" /data/openpilot/selfdrive/controls/lib/pathplanner.py )
+if [ -f /data/openpilot/selfdrive/controls/lib/pathplanner.py ]
   then
-    sed -i 's/LANE_CHANGE_SPEED_MIN = .*/LANE_CHANGE_SPEED_MIN = int(eval(autotuner_config.get("lane_change_speed", str(45)))) * CV.MPH_TO_MS/g' /data/openpilot/selfdrive/controls/lib/pathplanner.py
-    sed -i 's/LANE_CHANGE_TIME_MAX = .*/LANE_CHANGE_TIME_MAX = int(eval(autotuner_config.get("lane_change_time_max", str(10))))/g' /data/openpilot/selfdrive/controls/lib/pathplanner.py
+    pathplanner='/data/openpilot/selfdrive/controls/lib/pathplanner.py'
+fi
+if [ -f /data/openpilot/selfdrive/controls/lib/lateral_planner.py ]
+  then
+    pathplanner='/data/openpilot/selfdrive/controls/lib/lateral_planner.py'
+fi
+
+if ( ! grep -Fq "LANE_CHANGE_SPEED_MIN = int(eval(autotuner_config.get" ${pathplanner} )
+  then
+    sed -i 's/LANE_CHANGE_SPEED_MIN = .*/LANE_CHANGE_SPEED_MIN = int(eval(autotuner_config.get("lane_change_speed", str(45)))) * CV.MPH_TO_MS/g' ${pathplanner}
+    sed -i 's/LANE_CHANGE_TIME_MAX = .*/LANE_CHANGE_TIME_MAX = int(eval(autotuner_config.get("lane_change_time_max", str(10))))/g' ${pathplanner}
     ((patchCounter+=1))
 fi
 #####################################################################################################################################################################
