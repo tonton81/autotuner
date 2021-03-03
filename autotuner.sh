@@ -43,7 +43,7 @@ for f in /data/openpilot/selfdrive/car/honda/carcontroller.py \
          /data/openpilot/selfdrive/controls/lib/pathplanner.py \
          /data/openpilot/selfdrive/controls/lib/lateral_planner.py
 do
-  if [ -f f ]
+  if [ -f $f ]
     then
       if ( ! grep -Fxq "from autotuner_config import autotuner_config" $f )
         then
