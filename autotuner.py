@@ -84,6 +84,7 @@ def main_screen():
     print ("\n\n\n\r\t\t\033[1m\033[4mWhat would you like to mod today?\033[0m\n\n\r")
     print ("\t\t\t1) BP, V, Kp, Ki\n\r")
     print ("\t\t\t2) Kf, Steer Ratio, Steer Rate Cost\n\r")
+    print ("\t\t\t3) Steer Actuator Percent Limit\n\r")
     print ("\t\t\tC) Configure Firmware\n\r")
     print ("\t\t\tF) Load AutoECU\n\r")
     print ("\t\t\tx) exit\n\r")
@@ -94,6 +95,9 @@ def main_screen():
 
     if nbi.user_input == "2":
         nbi.menuscreen = "KfSrSrc"
+
+    if nbi.user_input == "3":
+        nbi.menuscreen = "actuator_steer_limit"
 
     if nbi.user_input == "F":
         nbi.menuscreen = "autoecu_menu"
@@ -106,6 +110,88 @@ def main_screen():
         sys.exit(0)
 
     time.sleep(0.2)
+#######################################################################################
+#######################################################################################
+def actuator_steer_limit_screen():
+    exit_condition = False
+    selection = 0
+    aspl_percent = 15
+    aspl_val = 0.01
+    while exit_condition == False:
+        system('clear')
+        print ("\n\n\n\r\t\t\t\t\033[1m\033[4mActuator Steer Percent Limit (by Kiril)\033[0m\n\r")
+        with open('/data/autotuner.json', 'r') as file: #read our configuration
+            config_data = json.loads(file.read())
+        actuator_percent_limit = float(config_data['actuator_steer_percent_limit'])
+        print ("    Actuator Steer Percent Limit: ", actuator_percent_limit, "\r")
+        nbi.user_input = nbi.input_get()
+        if nbi.user_input == "":
+            nbi.get_input_key()
+        print ("\t\t  *** Pick your inc/dec value ***\n\n\t\t\r")
+        print ("\t\t\t1) Enter a new actuator steer percent limit\n\r")
+        print ("\t\t\t2) Tune steering ratio by percentage (Default: 15%, Currently: " + str(aspl_percent) + ("% \033[92m<-------- selected\033[0m" if selection == 0 else "%") + ")\n\r")
+        print ("\t\t\t3) Tune steering ratio by value. (Currently:" + str(aspl_val) + (" \033[92m<-------- selected\033[0m" if selection == 1 else "") + ")\n\r")
+        print ("\t\t\td) decrease\n\r")
+        print ("\t\t\ti) increase\n\r")
+        print ("\t\t\tx) exit\n\r")
+        if nbi.user_input != "":
+            if nbi.user_input == '\x1b': #special keycode escape (possible arrow key)
+                arrow_key = check_for_arrows() # here but not used, saved for future reference
+            with open('/data/autotuner.json', 'r') as file: #read our configuration
+                config_data = json.loads(file.read())
+            if nbi.user_input == "1":
+                selection = 0
+                print ("  * Input your desired actuator steer percent limit *")
+                input_history = getcmd()
+                input_history.set_history_file("/data/autotuner/floats_history")
+                input_history.cmdloop()
+                if input_history.result != "":
+                    try:
+                        config_data['actuator_steer_percent_limit'] = format(eval(input_history.result), ".8f")
+                    except:
+                        pass
+            if nbi.user_input == "2":
+                selection = 0
+                print ("  * Input your desired percentage without the symbol *")
+                input_history = getcmd()
+                input_history.set_history_file("/data/autotuner/random_history")
+                input_history.cmdloop()
+                if input_history.result != "":
+                    try:
+                        aspl_percent = int(eval(input_history.result))
+                    except:
+                        pass
+            if nbi.user_input == "3":
+                selection = 1
+                print ("  * Input your desired value rate *")
+                input_history = getcmd()
+                input_history.set_history_file("/data/autotuner/floats_history")
+                input_history.cmdloop()
+                if input_history.result != "":
+                    try:
+                        aspl_val = format(eval(input_history.result), ".2f")
+                    except:
+                        pass
+            if nbi.user_input == "d":
+                if selection == 0:
+                    actuator_percent_limit = abs(( float(actuator_percent_limit) * (aspl_percent/100) ) - float(actuator_percent_limit))
+                    config_data['actuator_steer_percent_limit'] = str(format(actuator_percent_limit, "0.5f"))
+                if selection == 1:
+                    config_data['actuator_steer_percent_limit'] = str(format(float(actuator_percent_limit) - float(aspl_val), "0.5f"))
+            if nbi.user_input == "i":
+                if selection == 0:
+                    actuator_percent_limit = abs(( float(actuator_percent_limit) * (aspl_percent/100) ) + float(actuator_percent_limit))
+                    config_data['actuator_steer_percent_limit'] = str(format(actuator_percent_limit, "0.5f"))
+                if selection == 1:
+                    config_data['actuator_steer_percent_limit'] = str(format(float(actuator_percent_limit) + float(aspl_val), "0.5f"))
+            if nbi.user_input == "x":
+                nbi.menuscreen = "main"
+                return
+            with open('/data/autotuner.tmp', 'w', encoding='utf8') as file:
+                json.dump(config_data, file, indent=2, sort_keys=True, separators=(',', ': '), ensure_ascii=False)
+                file.flush()
+            shutil.move("/data/autotuner.tmp", "/data/autotuner.json") #change it as main config file
+        time.sleep(0.4)
 #######################################################################################
 def autoecu_signal_handler(sig, frame):
     print ("\n\t\tREBOOT COMMA AND RESTART CAR WHEN FLASHING IS 'COMPLETE'!\r")
@@ -873,3 +959,6 @@ if __name__ == '__main__':
             nbi.user_input = ""
             autoecu_menu()
 
+        while nbi.menuscreen == "actuator_steer_limit":
+            nbi.user_input = ""
+            actuator_steer_limit_screen()
