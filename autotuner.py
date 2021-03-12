@@ -111,7 +111,6 @@ def main_screen():
 
     time.sleep(0.2)
 #######################################################################################
-#######################################################################################
 def actuator_steer_limit_screen():
     exit_condition = False
     selection = 0
@@ -123,14 +122,14 @@ def actuator_steer_limit_screen():
         with open('/data/autotuner.json', 'r') as file: #read our configuration
             config_data = json.loads(file.read())
         actuator_percent_limit = float(config_data['actuator_steer_percent_limit'])
-        print ("    Actuator Steer Percent Limit: ", actuator_percent_limit, "\r")
+        print ("    Actuator Steer Percent Limit: ", actuator_percent_limit, "\n\r")
         nbi.user_input = nbi.input_get()
         if nbi.user_input == "":
             nbi.get_input_key()
         print ("\t\t  *** Pick your inc/dec value ***\n\n\t\t\r")
         print ("\t\t\t1) Enter a new actuator steer percent limit\n\r")
-        print ("\t\t\t2) Tune steering ratio by percentage (Default: 15%, Currently: " + str(aspl_percent) + ("% \033[92m<-------- selected\033[0m" if selection == 0 else "%") + ")\n\r")
-        print ("\t\t\t3) Tune steering ratio by value. (Currently:" + str(aspl_val) + (" \033[92m<-------- selected\033[0m" if selection == 1 else "") + ")\n\r")
+        print ("\t\t\t2) Tune actuator steer limit by percentage (Default: 15%, Currently: " + str(aspl_percent) + ("% \033[92m<-------- selected\033[0m" if selection == 0 else "%") + ")\n\r")
+        print ("\t\t\t3) Tune actuator steer limit by value. (Currently:" + str(aspl_val) + (" \033[92m<-------- selected\033[0m" if selection == 1 else "") + ")\n\r")
         print ("\t\t\td) decrease\n\r")
         print ("\t\t\ti) increase\n\r")
         print ("\t\t\tx) exit\n\r")
