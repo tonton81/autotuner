@@ -79,7 +79,10 @@ if ( ! grep -Fq "tunedV = eval(autotuner_config.get(" /data/openpilot/selfdrive/
     sed -i '/P \= self.params/i \    self.params.STEER_MAX = tunedBP[-1]' /data/openpilot/selfdrive/car/honda/carcontroller.py
     sed -i '/P \= self.params/i \    self.params.STEER_LOOKUP_BP = [v * -1 for v in tunedBP][1:][::-1] + list(tunedBP)' /data/openpilot/selfdrive/car/honda/carcontroller.py
     sed -i '/P \= self.params/i \    self.params.STEER_LOOKUP_V = [v * -1 for v in tunedV][1:][::-1] + list(tunedV)' /data/openpilot/selfdrive/car/honda/carcontroller.py
-
+    ((patchCounter+=1))
+fi
+if ( ! grep -Fq "self.prev_act = 0." /data/openpilot/selfdrive/car/honda/carcontroller.py )
+  then
     sed -i '/def __init__/a \    self.prev_act = 0.' /data/openpilot/selfdrive/car/honda/carcontroller.py
     sed -i '/hud_car = 0/a \      self.prev_act = actuators.steer' /data/openpilot/selfdrive/car/honda/carcontroller.py
     sed -i '/\*\*\*\* process the car messages \*\*\*\*/a \      self.prev_act = actuators.steer' /data/openpilot/selfdrive/car/honda/carcontroller.py
@@ -90,8 +93,13 @@ if ( ! grep -Fq "tunedV = eval(autotuner_config.get(" /data/openpilot/selfdrive/
     sed -i '/\*\*\*\* process the car messages \*\*\*\*/a \    if actuators.steer < (self.prev_act - percent_limit):' /data/openpilot/selfdrive/car/honda/carcontroller.py
     sed -i '/\*\*\*\* process the car messages \*\*\*\*/a \    percent_limit = float(format(eval(autotuner_config.get("actuator_steer_percent_limit", str(format(0.02, ".8f")))), "0.8f"))' /data/openpilot/selfdrive/car/honda/carcontroller.py
     sed -i 's/apply_steer = .*/apply_steer = int(interp(-self.prev_act * P.STEER_MAX, P.STEER_LOOKUP_BP, P.STEER_LOOKUP_V))/g' /data/openpilot/selfdrive/car/honda/carcontroller.py
-
     ((patchCounter+=1))
+else
+  if ( ! grep -Fq "actuator_steer_percent_limit" /data/openpilot/selfdrive/car/honda/carcontroller.py )
+    then
+      sed -i 's/percent_limit = .*/percent_limit = float(format(eval(autotuner_config.get("actuator_steer_percent_limit", str(format(0.02, ".8f")))), "0.8f"))/g' /data/openpilot/selfdrive/car/honda/carcontroller.py
+      ((patchCounter+=1))
+  fi
 fi
 #####################################################################################################################################################################
 ##### PATCH KF ######################################################################################################################################################
