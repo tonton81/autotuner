@@ -132,6 +132,17 @@ if ( ! grep -Fq "CP.steerRateCost = float(format(eval(autotuner_config.get" /dat
     ((patchCounter+=1))
 fi
 #####################################################################################################################################################################
+##### PATCH LONG_TUNING #############################################################################################################################################
+#####################################################################################################################################################################
+if ( ! grep -Fq "CP.longitudinalTuning.kpBP = eval(autotuner_config.get" /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py )
+  then
+    sed -i '/def update(self/a \    CP.longitudinalTuning.kpBP = eval(autotuner_config.get("longTuning_kpBP", str(CP.longitudinalTuning.kpBP)))' /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
+    sed -i '/def update(self/a \    CP.longitudinalTuning.kpV = eval(autotuner_config.get("longTuning_kpV", str(CP.longitudinalTuning.kpV)))' /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
+    sed -i '/def update(self/a \    CP.longitudinalTuning.kiBP = eval(autotuner_config.get("longTuning_kiBP", str(CP.longitudinalTuning.kiBP)))' /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
+    sed -i '/def update(self/a \    CP.longitudinalTuning.kiV = eval(autotuner_config.get("longTuning_kiV", str(CP.longitudinalTuning.kiV)))' /data/openpilot/selfdrive/controls/lib/latcontrol_pid.py
+    ((patchCounter+=1))
+fi
+#####################################################################################################################################################################
 ##### PATCH LANE_CHANGE_SPEED & TIME ################################################################################################################################
 #####################################################################################################################################################################
 if [ -f /data/openpilot/selfdrive/controls/lib/pathplanner.py ]

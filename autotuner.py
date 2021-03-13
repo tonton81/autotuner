@@ -85,6 +85,7 @@ def main_screen():
     print ("\t\t\t1) BP, V, Kp, Ki\n\r")
     print ("\t\t\t2) Kf, Steer Ratio, Steer Rate Cost\n\r")
     print ("\t\t\t3) Steer Actuator Percent Limit\n\r")
+    print ("\t\t\t4) Long Tuning\n\r")
     print ("\t\t\tC) Configure Firmware\n\r")
     print ("\t\t\tF) Load AutoECU\n\r")
     print ("\t\t\tx) exit\n\r")
@@ -99,6 +100,9 @@ def main_screen():
     if nbi.user_input == "3":
         nbi.menuscreen = "actuator_steer_limit"
 
+    if nbi.user_input == "4":
+        nbi.menuscreen = "long_tuning"
+
     if nbi.user_input == "F":
         nbi.menuscreen = "autoecu_menu"
 
@@ -110,6 +114,317 @@ def main_screen():
         sys.exit(0)
 
     time.sleep(0.2)
+#######################################################################################
+def long_tuning_screen():
+    exit_condition = False
+    selection = 0
+    selected = 0
+    _percent = 15
+    _value = 0.1
+    aspl_percent = 15
+    aspl_val = 0.01
+    while exit_condition == False:
+        system('clear')
+        print ("\n\n\n\r\t\t\t\t\033[1m\033[4mLong Tuning\033[0m\n\r")
+        with open('/data/autotuner.json', 'r') as file: #read our configuration
+            config_data = json.loads(file.read())
+        actuator_percent_limit = float(config_data['actuator_steer_percent_limit'])
+
+        kpBP = config_data['longTuning_kpBP']
+        kpV = config_data['longTuning_kpV']
+        kiBP = config_data['longTuning_kiBP']
+        kiV = config_data['longTuning_kiV']
+
+        kpBP_list = eval(kpBP)
+        kpV_list = eval(kpV)
+        kiBP_list = eval(kiBP)
+        kiV_list = eval(kiV)
+
+        if selected == 0:
+          print ("\t" + "kpBP[\033[92m" + str(eval(kpBP)[0]) + "\033[0m, " + str(eval(kpBP)[1]) + ", " + str(eval(kpBP)[2]) + "]\n\r")
+        elif selected == 1:
+          print ("\t" + "kpBP[" + str(eval(kpBP)[0]) + ", \033[92m" + str(eval(kpBP)[1]) + "\033[0m, " + str(eval(kpBP)[2]) + "]\n\r")
+        elif selected == 2:
+          print ("\t" + "kpBP[" + str(eval(kpBP)[0]) + ", " + str(eval(kpBP)[1]) + ", \033[92m" + str(eval(kpBP)[2]) + "\033[0m]\n\r")
+        else:
+          print ("\t" + "kpBP[" + str(eval(kpBP)[0]) + ", " + str(eval(kpBP)[1]) + ", " + str(eval(kpBP)[2]) + "]\n\r")
+
+        if selected == 3:
+          print ("\t" + "kpV[\033[92m" + str(eval(kpV)[0]) + "\033[0m, " + str(eval(kpV)[1]) + ", " + str(eval(kpV)[2]) + "]\n\r")
+        elif selected == 4:
+          print ("\t" + "kpV[" + str(eval(kpV)[0]) + ", \033[92m" + str(eval(kpV)[1]) + "\033[0m, " + str(eval(kpV)[2]) + "]\n\r")
+        elif selected == 5:
+          print ("\t" + "kpV[" + str(eval(kpV)[0]) + ", " + str(eval(kpV)[1]) + ", \033[92m" + str(eval(kpV)[2]) + "\033[0m]\n\r")
+        else:
+          print ("\t" + "kpV[" + str(eval(kpV)[0]) + ", " + str(eval(kpV)[1]) + ", " + str(eval(kpV)[2]) + "]\n\r")
+
+        if selected == 6:
+          print ("\t" + "kiBP[\033[92m" + str(eval(kiBP)[0]) + "\033[0m, " + str(eval(kiBP)[1]) + "]\n\r")
+        elif selected == 7:
+          print ("\t" + "kiBP[" + str(eval(kiBP)[0]) + ", \033[92m" + str(eval(kiBP)[1]) + "\033[0m]\n\r")
+        else:
+          print ("\t" + "kiBP[" + str(eval(kiBP)[0]) + ", " + str(eval(kiBP)[1]) + "]\n\r")
+
+        if selected == 8:
+          print ("\t" + "kiV[\033[92m" + str(eval(kiV)[0]) + "\033[0m, " + str(eval(kiV)[1]) + "]\n\r")
+        elif selected == 9:
+          print ("\t" + "kiV[" + str(eval(kiV)[0]) + ", \033[92m" + str(eval(kiV)[1]) + "\033[0m]\n\r")
+        else:
+          print ("\t" + "kiV[" + str(eval(kiV)[0]) + ", " + str(eval(kiV)[1]) + "]\n\r")
+
+        print ("\t\033[4m*** Pick an indice: 0 -> 9 ***\033[0m\n\r")
+
+        nbi.user_input = nbi.input_get()
+        if nbi.user_input == "":
+            nbi.get_input_key()
+
+        print ("\t\t  *** Pick your inc/dec value ***\n\n\t\t\r")
+        print ("\t\t\tn) Enter a new value\n\r")
+        print ("\t\t\tp) Change by % (Default: 15%, Currently: " + str(_percent) + ("% \033[92m<-------- selected\033[0m" if selection == 0 else "%") + ")\n\r")
+        print ("\t\t\tv) Change by value. (Currently: " + str(_value) + (" \033[92m<-------- selected\033[0m" if selection == 1 else "") + ")\n\r")
+        print ("\t\t\td) decrease\n\r")
+        print ("\t\t\ti) increase\n\r")
+        print ("\t\t\tx) exit\n\r")
+        if nbi.user_input != "":
+            if nbi.user_input == '\x1b': #special keycode escape (possible arrow key)
+                arrow_key = check_for_arrows() # here but not used, saved for future reference
+            with open('/data/autotuner.json', 'r') as file: #read our configuration
+                config_data = json.loads(file.read())
+
+            if nbi.user_input == "0":
+                selected = 0
+            if nbi.user_input == "1":
+                selected = 1
+            if nbi.user_input == "2":
+                selected = 2
+            if nbi.user_input == "3":
+                selected = 3
+            if nbi.user_input == "4":
+                selected = 4
+            if nbi.user_input == "5":
+                selected = 5
+            if nbi.user_input == "6":
+                selected = 6
+            if nbi.user_input == "7":
+                selected = 7
+            if nbi.user_input == "8":
+                selected = 8
+            if nbi.user_input == "9":
+                selected = 9
+            if nbi.user_input == "n":
+                print ("  * Input initial value *")
+                input_history = getcmd()
+                input_history.set_history_file("/data/autotuner/floats_history")
+                input_history.cmdloop()
+                if input_history.result != "":
+                    try:
+                        if selected == 0:
+                            kpBP_list[0] = eval(input_history.result)
+                            config_data['longTuning_kpBP'] = str(kpBP_list)
+                        if selected == 1:
+                            kpBP_list[1] = eval(input_history.result)
+                            config_data['longTuning_kpBP'] = str(kpBP_list)
+                        if selected == 2:
+                            kpBP_list[2] = eval(input_history.result)
+                            config_data['longTuning_kpBP'] = str(kpBP_list)
+                        if selected == 3:
+                            kpV_list[0] = eval(input_history.result)
+                            config_data['longTuning_kpV'] = str(kpV_list)
+                        if selected == 4:
+                            kpV_list[1] = eval(input_history.result)
+                            config_data['longTuning_kpV'] = str(kpV_list)
+                        if selected == 5:
+                            kpV_list[2] = eval(input_history.result)
+                            config_data['longTuning_kpV'] = str(kpV_list)
+                        if selected == 6:
+                            kiBP_list[0] = eval(input_history.result)
+                            config_data['longTuning_kiBP'] = str(kiBP_list)
+                        if selected == 7:
+                            kiBP_list[1] = eval(input_history.result)
+                            config_data['longTuning_kiBP'] = str(kiBP_list)
+                        if selected == 8:
+                            kiV_list[0] = eval(input_history.result)
+                            config_data['longTuning_kiV'] = str(kiV_list)
+                        if selected == 9:
+                            kiV_list[1] = eval(input_history.result)
+                            config_data['longTuning_kiV'] = str(kiV_list)
+                    except:
+                        pass
+            if nbi.user_input == "p":
+                selection = 0
+                print ("  * Input your desired percentage without the symbol *")
+                input_history = getcmd()
+                input_history.set_history_file("/data/autotuner/random_history")
+                input_history.cmdloop()
+                if input_history.result != "":
+                    try:
+                        _percent = int(eval(input_history.result))
+                    except:
+                        pass
+            if nbi.user_input == "v":
+                selection = 1
+                print ("  * Input your desired value rate *")
+                input_history = getcmd()
+                input_history.set_history_file("/data/autotuner/floats_history")
+                input_history.cmdloop()
+                if input_history.result != "":
+                    try:
+                        _value = eval(input_history.result)
+                    except:
+                        pass
+            if nbi.user_input == "d":
+                if selection == 0:
+                    if selected == 0:
+                        kpBP_list[0] = float(format(float(kpBP_list[0]) - (float(kpBP_list[0]) * (_percent/100)), "0.2f"))
+                        config_data['longTuning_kpBP'] = str(kpBP_list)
+                    if selected == 1:
+                        kpBP_list[1] = float(format(float(kpBP_list[1]) - (float(kpBP_list[1]) * (_percent/100)), "0.2f"))
+                        config_data['longTuning_kpBP'] = str(kpBP_list)
+                    if selected == 2:
+                        kpBP_list[2] = float(format(float(kpBP_list[2]) - (float(kpBP_list[2]) * (_percent/100)), "0.2f"))
+                        config_data['longTuning_kpBP'] = str(kpBP_list)
+
+                    if selected == 3:
+                        kpV_list[0] = float(format(float(kpV_list[0]) - (float(kpV_list[0]) * (_percent/100)), "0.2f"))
+                        config_data['longTuning_kpV'] = str(kpV_list)
+                    if selected == 4:
+                        kpV_list[1] = float(format(float(kpV_list[1]) - (float(kpV_list[1]) * (_percent/100)), "0.2f"))
+                        config_data['longTuning_kpV'] = str(kpV_list)
+                    if selected == 5:
+                        kpV_list[2] = float(format(float(kpV_list[2]) - (float(kpV_list[2]) * (_percent/100)), "0.2f"))
+                        config_data['longTuning_kpV'] = str(kpV_list)
+
+                    if selected == 6:
+                        kiBP_list[0] = float(format(float(kiBP_list[0]) - (float(kiBP_list[0]) * (_percent/100)), "0.2f"))
+                        config_data['longTuning_kiBP'] = str(kiBP_list)
+                    if selected == 7:
+                        kiBP_list[1] = float(format(float(kiBP_list[1]) - (float(kiBP_list[1]) * (_percent/100)), "0.2f"))
+                        config_data['longTuning_kiBP'] = str(kiBP_list)
+
+                    if selected == 8:
+                        kiV_list[0] = float(format(float(kiV_list[0]) - (float(kiV_list[0]) * (_percent/100)), "0.2f"))
+                        config_data['longTuning_kiV'] = str(kiV_list)
+                    if selected == 9:
+                        kiV_list[1] = float(format(float(kiV_list[1]) - (float(kiV_list[1]) * (_percent/100)), "0.2f"))
+                        config_data['longTuning_kiV'] = str(kiV_list)
+
+                if selection == 1:
+                    if selected == 0:
+                        kpBP_list[0] = float(format(kpBP_list[0] - _value, "0.2f"))
+                        config_data['longTuning_kpBP'] = str(kpBP_list)
+                    if selected == 1:
+                        kpBP_list[1] = float(format(kpBP_list[1] - _value, "0.2f"))
+                        config_data['longTuning_kpBP'] = str(kpBP_list)
+                    if selected == 2:
+                        kpBP_list[2] = float(format(kpBP_list[2] - _value, "0.2f"))
+                        config_data['longTuning_kpBP'] = str(kpBP_list)
+
+                    if selected == 3:
+                        kpV_list[0] = float(format(kpV_list[0] - _value, "0.2f"))
+                        config_data['longTuning_kpV'] = str(kpV_list)
+                    if selected == 4:
+                        kpV_list[1] = float(format(kpV_list[1] - _value, "0.2f"))
+                        config_data['longTuning_kpV'] = str(kpV_list)
+                    if selected == 5:
+                        kpV_list[2] = float(format(kpV_list[2] - _value, "0.2f"))
+                        config_data['longTuning_kpV'] = str(kpV_list)
+
+                    if selected == 6:
+                        kiBP_list[0] = float(format(kiBP_list[0] - _value, "0.2f"))
+                        config_data['longTuning_kiBP'] = str(kiBP_list)
+                    if selected == 7:
+                        kiBP_list[1] = float(format(kiBP_list[1] - _value, "0.2f"))
+                        config_data['longTuning_kiBP'] = str(kiBP_list)
+
+                    if selected == 8:
+                        kiV_list[0] = float(format(kiV_list[0] - _value, "0.2f"))
+                        config_data['longTuning_kiV'] = str(kiV_list)
+                    if selected == 9:
+                        kiV_list[1] = float(format(kiV_list[1] - _value, "0.2f"))
+                        config_data['longTuning_kiV'] = str(kiV_list)
+
+
+
+            if nbi.user_input == "i":
+                if selection == 0:
+                    if selected == 0:
+                        kpBP_list[0] = float(format(float(kpBP_list[0]) + (float(kpBP_list[0]) * (_percent/100)), "0.2f"))
+                        config_data['longTuning_kpBP'] = str(kpBP_list)
+                    if selected == 1:
+                        kpBP_list[1] = float(format(float(kpBP_list[1]) + (float(kpBP_list[1]) * (_percent/100)), "0.2f"))
+                        config_data['longTuning_kpBP'] = str(kpBP_list)
+                    if selected == 2:
+                        kpBP_list[2] = float(format(float(kpBP_list[2]) + (float(kpBP_list[2]) * (_percent/100)), "0.2f"))
+                        config_data['longTuning_kpBP'] = str(kpBP_list)
+
+                    if selected == 3:
+                        kpV_list[0] = float(format(float(kpV_list[0]) + (float(kpV_list[0]) * (_percent/100)), "0.2f"))
+                        config_data['longTuning_kpV'] = str(kpV_list)
+                    if selected == 4:
+                        kpV_list[1] = float(format(float(kpV_list[1]) + (float(kpV_list[1]) * (_percent/100)), "0.2f"))
+                        config_data['longTuning_kpV'] = str(kpV_list)
+                    if selected == 5:
+                        kpV_list[2] = float(format(float(kpV_list[2]) + (float(kpV_list[2]) * (_percent/100)), "0.2f"))
+                        config_data['longTuning_kpV'] = str(kpV_list)
+
+                    if selected == 6:
+                        kiBP_list[0] = float(format(float(kiBP_list[0]) + (float(kiBP_list[0]) * (_percent/100)), "0.2f"))
+                        config_data['longTuning_kiBP'] = str(kiBP_list)
+                    if selected == 7:
+                        kiBP_list[1] = float(format(float(kiBP_list[1]) + (float(kiBP_list[1]) * (_percent/100)), "0.2f"))
+                        config_data['longTuning_kiBP'] = str(kiBP_list)
+
+                    if selected == 8:
+                        kiV_list[0] = float(format(float(kiV_list[0]) + (float(kiV_list[0]) * (_percent/100)), "0.2f"))
+                        config_data['longTuning_kiV'] = str(kiV_list)
+                    if selected == 9:
+                        kiV_list[1] = float(format(float(kiV_list[1]) + (float(kiV_list[1]) * (_percent/100)), "0.2f"))
+                        config_data['longTuning_kiV'] = str(kiV_list)
+
+
+
+                if selection == 1:
+                    if selected == 0:
+                        kpBP_list[0] = float(format(kpBP_list[0] + _value, "0.2f"))
+                        config_data['longTuning_kpBP'] = str(kpBP_list)
+                    if selected == 1:
+                        kpBP_list[1] = float(format(kpBP_list[1] + _value, "0.2f"))
+                        config_data['longTuning_kpBP'] = str(kpBP_list)
+                    if selected == 2:
+                        kpBP_list[2] = float(format(kpBP_list[2] + _value, "0.2f"))
+                        config_data['longTuning_kpBP'] = str(kpBP_list)
+
+                    if selected == 3:
+                        kpV_list[0] = float(format(kpV_list[0] + _value, "0.2f"))
+                        config_data['longTuning_kpV'] = str(kpV_list)
+                    if selected == 4:
+                        kpV_list[1] = float(format(kpV_list[1] + _value, "0.2f"))
+                        config_data['longTuning_kpV'] = str(kpV_list)
+                    if selected == 5:
+                        kpV_list[2] = float(format(kpV_list[2] + _value, "0.2f"))
+                        config_data['longTuning_kpV'] = str(kpV_list)
+
+                    if selected == 6:
+                        kiBP_list[0] = float(format(kiBP_list[0] + _value, "0.2f"))
+                        config_data['longTuning_kiBP'] = str(kiBP_list)
+                    if selected == 7:
+                        kiBP_list[1] = float(format(kiBP_list[1] + _value, "0.2f"))
+                        config_data['longTuning_kiBP'] = str(kiBP_list)
+
+                    if selected == 8:
+                        kiV_list[0] = float(format(kiV_list[0] + _value, "0.2f"))
+                        config_data['longTuning_kiV'] = str(kiV_list)
+                    if selected == 9:
+                        kiV_list[1] = float(format(kiV_list[1] + _value, "0.2f"))
+                        config_data['longTuning_kiV'] = str(kiV_list)
+            if nbi.user_input == "x":
+                nbi.menuscreen = "main"
+                return
+            with open('/data/autotuner.tmp', 'w', encoding='utf8') as file:
+                json.dump(config_data, file, indent=2, sort_keys=True, separators=(',', ': '), ensure_ascii=False)
+                file.flush()
+            shutil.move("/data/autotuner.tmp", "/data/autotuner.json") #change it as main config file
+        time.sleep(0.4)
 #######################################################################################
 def actuator_steer_limit_screen():
     exit_condition = False
@@ -128,8 +443,8 @@ def actuator_steer_limit_screen():
             nbi.get_input_key()
         print ("\t\t  *** Pick your inc/dec value ***\n\n\t\t\r")
         print ("\t\t\t1) Enter a new actuator steer percent limit\n\r")
-        print ("\t\t\t2) Tune actuator steer limit by percentage (Default: 15%, Currently: " + str(aspl_percent) + ("% \033[92m<-------- selected\033[0m" if selection == 0 else "%") + ")\n\r")
-        print ("\t\t\t3) Tune actuator steer limit by value. (Currently:" + str(aspl_val) + (" \033[92m<-------- selected\033[0m" if selection == 1 else "") + ")\n\r")
+        print ("\t\t\t2) Tune steer limit by % (Default: 15%, Currently: " + str(aspl_percent) + ("% \033[92m<-------- selected\033[0m" if selection == 0 else "%") + ")\n\r")
+        print ("\t\t\t3) Tune steer limit by value. (Currently: " + str(aspl_val) + (" \033[92m<-------- selected\033[0m" if selection == 1 else "") + ")\n\r")
         print ("\t\t\td) decrease\n\r")
         print ("\t\t\ti) increase\n\r")
         print ("\t\t\tx) exit\n\r")
@@ -961,3 +1276,8 @@ if __name__ == '__main__':
         while nbi.menuscreen == "actuator_steer_limit":
             nbi.user_input = ""
             actuator_steer_limit_screen()
+
+        while nbi.menuscreen == "long_tuning":
+            nbi.user_input = ""
+            long_tuning_screen()
+
