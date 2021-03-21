@@ -60,3 +60,4 @@ with open (manager_file.replace(".py", ".bak"), 'w') as manager_py_write:
             else:
                 manager_py_write.write(line)
     shutil.move(manager_file.replace(".py", ".bak"), manager_file)
+os.chmod(manager_file, 0o0777)
